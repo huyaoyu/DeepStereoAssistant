@@ -1,0 +1,11 @@
+*.pyc
+*.dat
+*.bmp
+*.jpg
+*.png
+*.code-workspace
+Debug/
+debug/
+Data/
+data/
+
