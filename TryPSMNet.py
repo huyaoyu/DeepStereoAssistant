@@ -51,8 +51,8 @@ def list_files_sample(dataPath):
 
 # Template for custom WorkFlow object.
 class MyWF(TorchFlow.TorchFlow):
-    def __init__(self, workingDir, prefix = "", suffix = ""):
-        super(MyWF, self).__init__(workingDir, prefix, suffix)
+    def __init__(self, workingDir, prefix = "", suffix = "", disableStreamLogger=False):
+        super(MyWF, self).__init__(workingDir, prefix, suffix, disableStreamLogger)
 
         # === Custom member variables. ===
 
@@ -92,8 +92,10 @@ class MyWF(TorchFlow.TorchFlow):
         torch.cuda.manual_seed(1)
 
         # Get all the sample images.
+        # imgTrainL, imgTrainR, dispTrain, imgTestL, imgTestR, dispTest \
+        #     = list_files_sample("/home/yyhu/expansion/OriginalData/SceneFlow/Sampler/FlyingThings3D")
         imgTrainL, imgTrainR, dispTrain, imgTestL, imgTestR, dispTest \
-            = list_files_sample("/home/yyhu/expansion/OriginalData/SceneFlow/Sampler/FlyingThings3D")
+            = list_files_sample("/media/yaoyu/DiskE/SceneFlow/Sampler/FlyingThings3D")
 
         # Dataloader.
         self.imgTrainLoader = torch.utils.data.DataLoader( \
@@ -105,7 +107,7 @@ class MyWF(TorchFlow.TorchFlow):
             batch_size=2, shuffle=False, num_workers=2, drop_last=False )
 
         # Neural net.
-        self.model = PyramidNet.PSMNet(3, 32, 8)
+        self.model = PyramidNet.PSMNet(3, 32, 64)
         self.model.cuda()
 
         self.logger.info("PSMNet has %d model parameters." % \
@@ -142,15 +144,15 @@ class MyWF(TorchFlow.TorchFlow):
         out2 = torch.squeeze( out2, 1 )
         out3 = torch.squeeze( out3, 1 )
 
-        loss = 0.5*F.smooth_l1_loss(out1[mask], disp[mask], size_average=True) \
-             + 0.7*F.smooth_l1_loss(out2[mask], disp[mask], size_average=True) \
-             +     F.smooth_l1_loss(out3[mask], disp[mask], size_average=True)
+        loss = 0.5*F.smooth_l1_loss(out1[mask], disp[mask], reduction="mean") \
+             + 0.7*F.smooth_l1_loss(out2[mask], disp[mask], reduction="mean") \
+             +     F.smooth_l1_loss(out3[mask], disp[mask], reduction="mean")
 
         loss.backward()
 
         self.optimizer.step()
 
-        self.AV["loss"].push_back( loss.data[0] )
+        self.AV["loss"].push_back( loss.item() )
 
         self.countTrain += 1
 
@@ -189,8 +191,8 @@ if __name__ == "__main__":
 
     try:
         # Instantiate an object for MyWF.
-        wf = MyWF("./Debug", prefix = "Debug_", suffix = "_debug")
-        wf.verbose = True
+        wf = MyWF("./Debug", prefix = "Debug_", suffix = "_debug", disableStreamLogger=False)
+        wf.verbose = False
 
         # Initialization.
         print_delimeter(title = "Initialize.")
@@ -199,15 +201,16 @@ if __name__ == "__main__":
         # Training loop.
         print_delimeter(title = "Training loops.")
 
-        for batchIdx, ( imgCropL, imgCropR, dispCrop ) in enumerate( wf.imgTrainLoader ):
-            wf.train( imgCropL, imgCropR, dispCrop )
+        for i in range(5):
+            for batchIdx, ( imgCropL, imgCropR, dispCrop ) in enumerate( wf.imgTrainLoader ):
+                wf.train( imgCropL, imgCropR, dispCrop )
 
         # # Test and finalize.
         # print_delimeter(title = "Test and finalize.")
 
         # wf.test()
         wf.finalize()
-    except WrokFlow.SigIntException as sie:
+    except WorkFlow.SigIntException as sie:
         print("SigInt revieved, perform finalize...")
         wf.finalize()
     except WorkFlow.WFException as e:

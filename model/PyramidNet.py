@@ -180,13 +180,13 @@ class FeatureExtraction(nn.Module):
 
         # SPP.
         outputSPP1 = self.SPP1(outputSkip)
-        outputSPP1 = F.upsample( outputSPP1, ( outputSkip.size()[2], outputSkip.size()[3] ), mode="bilinear" )
+        outputSPP1 = F.interpolate( outputSPP1, ( outputSkip.size()[2], outputSkip.size()[3] ), mode="bilinear", align_corners=False )
         outputSPP2 = self.SPP1(outputSkip)
-        outputSPP2 = F.upsample( outputSPP2, ( outputSkip.size()[2], outputSkip.size()[3] ), mode="bilinear" )
+        outputSPP2 = F.interpolate( outputSPP2, ( outputSkip.size()[2], outputSkip.size()[3] ), mode="bilinear", align_corners=False )
         outputSPP3 = self.SPP1(outputSkip)
-        outputSPP3 = F.upsample( outputSPP3, ( outputSkip.size()[2], outputSkip.size()[3] ), mode="bilinear" )
+        outputSPP3 = F.interpolate( outputSPP3, ( outputSkip.size()[2], outputSkip.size()[3] ), mode="bilinear", align_corners=False )
         outputSPP4 = self.SPP1(outputSkip)
-        outputSPP4 = F.upsample( outputSPP4, ( outputSkip.size()[2], outputSkip.size()[3] ), mode="bilinear" )
+        outputSPP4 = F.interpolate( outputSPP4, ( outputSkip.size()[2], outputSkip.size()[3] ), mode="bilinear", align_corners=False )
 
         # Concat the extracted features.
         output = torch.cat( ( outputRaw, outputSkip, outputSPP4, outputSPP3, outputSPP2, outputSPP1 ), 1 )
@@ -229,7 +229,7 @@ class Hourglass(nn.Module):
         out = self.conv1(x)
         pre = self.conv2(out)
 
-        if ( post is not None ):
+        if ( postSqu is not None ):
             pre = F.relu( pre + postSqu, inplace=True )
         else:
             pre = F.relu( pre, inplace=True )
@@ -361,23 +361,23 @@ class PSMNet(nn.Module):
         out3 = out3 + cost0
 
         # Classification in the disparity dimension.
-        cost1 = sefl.cd1( out1 )
-        cost2 = sefl.cd2( out2 ) + cost1
-        cost3 = sefl.cd3( out3 ) + cost2
+        cost1 = self.cd1( out1 )
+        cost2 = self.cd2( out2 ) + cost1
+        cost3 = self.cd3( out3 ) + cost2
 
         # Disparity regression.
         if ( self.training ):
-            cost1 = F.upsample( cost1, [ self.maxDisp, L.size()[2], L.size()[3] ], mode="trilinear" )
+            cost1 = F.interpolate( cost1, [ self.maxDisp, L.size()[2], L.size()[3] ], mode="trilinear", align_corners=False )
             cost1 = torch.squeeze( cost1, 1 )
             pred1 = F.softmax( cost1, dim = 1 )
             pred1 = DisparityRegression( self.maxDisp )( pred1 )
 
-            cost2 = F.upsample( cost2, [ self.maxDisp, L.size()[2], L.size()[3] ], mode="trilinear" )
+            cost2 = F.interpolate( cost2, [ self.maxDisp, L.size()[2], L.size()[3] ], mode="trilinear", align_corners=False )
             cost2 = torch.squeeze( cost2, 1 )
             pred2 = F.softmax( cost2, dim = 1 )
             pred2 = DisparityRegression( self.maxDisp )( pred2 )
 
-        cost3 = F.upsample( cost3, [ self.maxDisp, L.size()[2], L.size()[3] ], mode="trilinear" )
+        cost3 = F.interpolate( cost3, [ self.maxDisp, L.size()[2], L.size()[3] ], mode="trilinear", align_corners=False )
         cost3 = torch.squeeze( cost3, 1 )
         pred3 = F.softmax( cost3, dim = 1 )
         pred3 = DisparityRegression( self.maxDisp )( pred3 )
