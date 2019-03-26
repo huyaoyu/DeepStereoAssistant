@@ -34,7 +34,7 @@ class ConvBN(nn.Module):
         raise PyramidNetException("Base class abstract member function is called.")
     
 class CB2D(ConvBN):
-    def __init_(self, inChannels, outChannels, kSize, stride, padding, dilation):
+    def __init__(self, inChannels, outChannels, kSize, stride, padding, dilation):
         super(CB2D, self).__init__( inChannels, outChannels, kSize, stride, padding, dilation )
 
         # Modify the values of padding.
@@ -49,7 +49,7 @@ class CB2D(ConvBN):
         return self.cb(x)
     
 class CB3D(ConvBN):
-    def __init_(self, inChannels, outChannels, kSize, stride, padding):
+    def __init__(self, inChannels, outChannels, kSize, stride, padding):
         super(CB3D, self).__init__( inChannels, outChannels, kSize, stride, padding, dilation=1 )
 
         # Modify the values of padding.
@@ -95,10 +95,10 @@ class LayerBlock(nn.Module):
 
 class FeatureExtractionLayer(nn.Module):
     def __init__(self, block, inChannels, outChannels, nBlocks, stride, padding, dilation):
-        super(FeatureExtractionLayer, self).__init_()
+        super(FeatureExtractionLayer, self).__init__()
 
         ft = None # The feature transformer.
-        if ( 1 != stride or inChannels > outChannels ):
+        if ( 1 != stride or inChannels != outChannels ):
             # An actual feature transformer is needed here.
             # Check the output dimension of ft.
             ft = CB2D( inChannels, outChannels, kSize=1, stride=stride, padding=0, dilation=1 )
@@ -116,6 +116,8 @@ class FeatureExtractionLayer(nn.Module):
 
 class SPPBranch(nn.Module):
     def __init__(self, inChannels, outChannels, avgPoolingKSize):
+        super(SPPBranch, self).__init__()
+
         self.inChannels  = inChannels
         self.outChannels = outChannels
         self.APSK        = avgPoolingKSize
@@ -131,6 +133,8 @@ class SPPBranch(nn.Module):
 
 class FeatureExtraction(nn.Module):
     def __init__(self, inChannels, outChannels):
+        super(FeatureExtraction, self).__init__()
+
         self.inChannels  = inChannels
         self.outChannels = outChannels
 
@@ -166,7 +170,7 @@ class FeatureExtraction(nn.Module):
 
     def forward(self, x):
         # Pre-process convolutions.
-        ouput = self.preConv(x)
+        output = self.preConv(x)
 
         # Feature extraction.
         output     = self.fe1(output)
@@ -176,13 +180,13 @@ class FeatureExtraction(nn.Module):
 
         # SPP.
         outputSPP1 = self.SPP1(outputSkip)
-        outputSPP1 = F.upsample( outputSPP1, ( outputSkip.size()[2], outputSkip()[3] ), mode="bilinear" )
+        outputSPP1 = F.upsample( outputSPP1, ( outputSkip.size()[2], outputSkip.size()[3] ), mode="bilinear" )
         outputSPP2 = self.SPP1(outputSkip)
-        outputSPP2 = F.upsample( outputSPP2, ( outputSkip.size()[2], outputSkip()[3] ), mode="bilinear" )
+        outputSPP2 = F.upsample( outputSPP2, ( outputSkip.size()[2], outputSkip.size()[3] ), mode="bilinear" )
         outputSPP3 = self.SPP1(outputSkip)
-        outputSPP3 = F.upsample( outputSPP3, ( outputSkip.size()[2], outputSkip()[3] ), mode="bilinear" )
+        outputSPP3 = F.upsample( outputSPP3, ( outputSkip.size()[2], outputSkip.size()[3] ), mode="bilinear" )
         outputSPP4 = self.SPP1(outputSkip)
-        outputSPP4 = F.upsample( outputSPP4, ( outputSkip.size()[2], outputSkip()[3] ), mode="bilinear" )
+        outputSPP4 = F.upsample( outputSPP4, ( outputSkip.size()[2], outputSkip.size()[3] ), mode="bilinear" )
 
         # Concat the extracted features.
         output = torch.cat( ( outputRaw, outputSkip, outputSPP4, outputSPP3, outputSPP2, outputSPP1 ), 1 )
@@ -194,7 +198,7 @@ class FeatureExtraction(nn.Module):
 
 class Hourglass(nn.Module):
     def __init__(self, inChannels):
-        super(Hourglass, self).__init_()
+        super(Hourglass, self).__init__()
 
         self.inChannels = inChannels
 
@@ -318,8 +322,8 @@ class PSMNet(nn.Module):
                 m.bias.data.zero_()
             elif ( isinstance( m, (nn.Linear) ) ):
                 m.bias.data.zero_()
-            else:
-                raise PyramidNetException("Unexpected module type.")
+            # else:
+            #     raise PyramidNetException("Unexpected module type {}.".format(type(m)))
 
     def forward(self, L, R):
         # Feature extraction.
@@ -329,10 +333,10 @@ class PSMNet(nn.Module):
 
         # Make new cost volume as 5D tensor.
         cost = Variable( \
-            torch.FloatTensor( refFeature.size()[0], refFeature.size()[1]*2, self.maxDisp/4, refFeature.size()[2], refFeature.size()[3]).zero_() \
+            torch.FloatTensor( refFeature.size()[0], refFeature.size()[1]*2, int(self.maxDisp/4), refFeature.size()[2], refFeature.size()[3]).zero_() \
                        ).cuda()
 
-        for i in range( self.maxDisp / 4 ):
+        for i in range( int(self.maxDisp / 4) ):
             if i > 0 :
              cost[:, :refFeature.size()[1],  i, :, i:] = refFeature[ :, :, :, i:   ]
              cost[:,  refFeature.size()[1]:, i, :, i:] = tgtFeature[ :, :, :,  :-i ]
