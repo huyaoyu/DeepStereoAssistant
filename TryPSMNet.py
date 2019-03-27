@@ -1,6 +1,7 @@
 
 from __future__ import print_function
 
+import argparse
 import glob
 import math
 import numpy as np
@@ -15,10 +16,12 @@ import torch.optim as optim
 import torch.utils.data
 from torch.autograd import Variable
 import torch.nn.functional as F
+import torchvision.transforms as transforms
 
 from workflow import WorkFlow, TorchFlow
 
 from DataLoader.SceneFlow import Loader as DA
+from DataLoader import PreProcess
 from model import PyramidNet
 
 def print_delimeter(c = "=", n = 20, title = "", leading = "\n", ending = "\n"):
@@ -56,6 +59,8 @@ class MyWF(TorchFlow.TorchFlow):
 
         # === Custom member variables. ===
 
+        self.flagGrayscale = False
+
         # === Create the AccumulatedObjects. ===
         self.add_accumulated_value("lossTest", 10)
 
@@ -92,22 +97,33 @@ class MyWF(TorchFlow.TorchFlow):
         torch.cuda.manual_seed(1)
 
         # Get all the sample images.
-        # imgTrainL, imgTrainR, dispTrain, imgTestL, imgTestR, dispTest \
-        #     = list_files_sample("/home/yyhu/expansion/OriginalData/SceneFlow/Sampler/FlyingThings3D")
         imgTrainL, imgTrainR, dispTrain, imgTestL, imgTestR, dispTest \
-            = list_files_sample("/media/yaoyu/DiskE/SceneFlow/Sampler/FlyingThings3D")
+            = list_files_sample("/home/yyhu/expansion/OriginalData/SceneFlow/Sampler/FlyingThings3D")
+        # imgTrainL, imgTrainR, dispTrain, imgTestL, imgTestR, dispTest \
+        #     = list_files_sample("/media/yaoyu/DiskE/SceneFlow/Sampler/FlyingThings3D")
 
         # Dataloader.
+        if ( True == self.flagGrayscale ):
+            preprocessor = transforms.Compose( [ \
+                PreProcess.Grayscale(), \
+                transforms.ToTensor() ] )
+        else:
+            preprocessor = PreProcess.get_transform(augment=False)
+
         self.imgTrainLoader = torch.utils.data.DataLoader( \
-            DA.myImageFolder( imgTrainL, imgTrainR, dispTrain, True ), \
+            DA.myImageFolder( imgTrainL, imgTrainR, dispTrain, True, preprocessor=preprocessor ), \
             batch_size=2, shuffle=True, num_workers=2, drop_last=False )
 
         self.imgTestLoader = torch.utils.data.DataLoader( \
-            DA.myImageFolder( imgTrainL, imgTrainR, dispTrain, False ), \
+            DA.myImageFolder( imgTrainL, imgTrainR, dispTrain, False, preprocessor=preprocessor ), \
             batch_size=2, shuffle=False, num_workers=2, drop_last=False )
 
         # Neural net.
-        self.model = PyramidNet.PSMNet(3, 32, 64)
+        if ( True == self.flagGrayscale ):
+            self.model = PyramidNet.PSMNet(3, 32, 64)
+        else:
+            self.model = PyramidNet.PSMNet(1, 32, 64)
+
         self.model.cuda()
 
         self.logger.info("PSMNet has %d model parameters." % \
@@ -187,12 +203,21 @@ class MyWF(TorchFlow.TorchFlow):
 if __name__ == "__main__":
     print("Hello TyrPSMNet.")
 
+    # Handle the arguments.
+    parser = argparse.ArgumentParser(description='Train pyramid stereo matching net.')
+
+    parser.add_argument("--graysacle", help = "Work on grayscale images.", action = "store_true", default = False)
+
+    args = parser.parse_args()
+
     print_delimeter(title = "Before WorkFlow initialization." )
 
     try:
         # Instantiate an object for MyWF.
         wf = MyWF("./Debug", prefix = "Debug_", suffix = "_debug", disableStreamLogger=False)
         wf.verbose = False
+
+        wf.flagGrayscale = args.grayscale
 
         # Initialization.
         print_delimeter(title = "Initialize.")

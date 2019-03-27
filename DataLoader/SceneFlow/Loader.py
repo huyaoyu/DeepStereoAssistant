@@ -31,7 +31,7 @@ def disparity_loader(path):
     return IO.readPFM(path)
 
 class myImageFolder(data.Dataset):
-    def __init__(self, left, right, left_disparity, training, loader=default_loader, dploader= disparity_loader):
+    def __init__(self, left, right, left_disparity, training, loader=default_loader, dploader= disparity_loader, preprocessor=None):
  
         self.left = left
         self.right = right
@@ -39,6 +39,9 @@ class myImageFolder(data.Dataset):
         self.loader = loader
         self.dploader = dploader
         self.training = training
+
+        # Modified.
+        self.preprocessor = preprocessor
 
     def __getitem__(self, index):
         left  = self.left[index]
@@ -65,18 +68,26 @@ class myImageFolder(data.Dataset):
 
            dataL = dataL[y1:y1 + th, x1:x1 + tw]
 
-           processed = PreProcess.get_transform(augment=False)  
-           left_img   = processed(left_img)
-           right_img  = processed(right_img)
+        #    processed = PreProcess.get_transform(augment=False)  
+        #    left_img   = processed(left_img)
+        #    right_img  = processed(right_img)
+
+           if ( self.preprocessor is not None ):
+               left_img  = self.preprocessor(left_img)
+               right_img = self.preprocessor(right_img)
 
            return left_img, right_img, dataL
         else:
            w, h = left_img.size
            left_img = left_img.crop((w-960, h-544, w, h))
            right_img = right_img.crop((w-960, h-544, w, h))
-           processed = PreProcess.get_transform(augment=False)  
-           left_img       = processed(left_img)
-           right_img      = processed(right_img)
+        #    processed = PreProcess.get_transform(augment=False)  
+        #    left_img       = processed(left_img)
+        #    right_img      = processed(right_img)
+
+           if ( self.preprocessor is not None ):
+               left_img  = self.preprocessor(left_img)
+               right_img = self.preprocessor(right_img)
 
            return left_img, right_img, dataL
 
