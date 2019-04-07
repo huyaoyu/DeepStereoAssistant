@@ -97,16 +97,17 @@ class MyWF(TorchFlow.TorchFlow):
         torch.cuda.manual_seed(1)
 
         # Get all the sample images.
-        imgTrainL, imgTrainR, dispTrain, imgTestL, imgTestR, dispTest \
-            = list_files_sample("/home/yyhu/expansion/OriginalData/SceneFlow/Sampler/FlyingThings3D")
         # imgTrainL, imgTrainR, dispTrain, imgTestL, imgTestR, dispTest \
-        #     = list_files_sample("/media/yaoyu/DiskE/SceneFlow/Sampler/FlyingThings3D")
+        #     = list_files_sample("/home/yyhu/expansion/OriginalData/SceneFlow/Sampler/FlyingThings3D")
+        imgTrainL, imgTrainR, dispTrain, imgTestL, imgTestR, dispTest \
+            = list_files_sample("/media/yaoyu/DiskE/SceneFlow/Sampler/FlyingThings3D")
 
         # Dataloader.
         if ( True == self.flagGrayscale ):
             preprocessor = transforms.Compose( [ \
+                transforms.ToTensor(), \
                 PreProcess.Grayscale(), \
-                transforms.ToTensor() ] )
+                PreProcess.SingleChannel() ] )
         else:
             preprocessor = PreProcess.get_transform(augment=False)
 
@@ -120,9 +121,9 @@ class MyWF(TorchFlow.TorchFlow):
 
         # Neural net.
         if ( True == self.flagGrayscale ):
-            self.model = PyramidNet.PSMNet(3, 32, 64)
-        else:
             self.model = PyramidNet.PSMNet(1, 32, 64)
+        else:
+            self.model = PyramidNet.PSMNet(3, 32, 64)
 
         self.model.cuda()
 
@@ -206,7 +207,7 @@ if __name__ == "__main__":
     # Handle the arguments.
     parser = argparse.ArgumentParser(description='Train pyramid stereo matching net.')
 
-    parser.add_argument("--graysacle", help = "Work on grayscale images.", action = "store_true", default = False)
+    parser.add_argument("--grayscale", help = "Work on grayscale images.", action = "store_true", default = False)
 
     args = parser.parse_args()
 

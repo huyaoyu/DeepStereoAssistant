@@ -114,6 +114,10 @@ class Grayscale(object):
         gs[2].copy_(gs[0])
         return gs
 
+class SingleChannel(object):
+    def __call__(self, x):
+        return x[0].view( ( 1, x.size()[1], x.size()[2] ) )
+
 class Saturation(object):
 
     def __init__(self, var):
