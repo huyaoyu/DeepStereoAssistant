@@ -20,9 +20,12 @@ import torchvision.transforms as transforms
 
 from workflow import WorkFlow, TorchFlow
 
+import ArgumentParser
 from DataLoader.SceneFlow import Loader as DA
 from DataLoader import PreProcess
 from model import PyramidNet
+
+RECOMMENDED_MIN_INTERMITTENT_PLOT_INTERVAL = 100
 
 def print_delimeter(c = "=", n = 20, title = "", leading = "\n", ending = "\n"):
     d = [c for i in range( int(n/2) )]
@@ -52,6 +55,50 @@ def list_files_sample(dataPath):
     #  trainImgL, trainImgR, trainDisp, testImgL, testImgR, testDisp
     return allImgL, allImgR, allDisp, allImgL, allImgR, allDisp
 
+def list_files_sceneflow_FlyingThings(rootPath):
+    """
+    rootPath: The path of the root of the dataset. The directory contains "frames_cleanpass" and "disparity" folders.
+    """
+
+    if ( False == os.path.isdir(rootPath) ):
+        Exception("%s does not exist." % ( rootPath ))
+
+    # Search the "frames_cleanpass/TRAIN" directory recursively.
+    allImgL = sorted( glob.glob( rootPath + "/frames_cleanpass/TRAIN/**/left/*.png", recursive=True ) )
+
+    # Generate all filenames assuming they are all exist on the filesystem.
+    allImgR = []
+    allDisp = []
+
+    for fn in allImgL:
+        # Make the path for the right image.
+        fnR = fn.replace( "left", "right" )
+        allImgR.append( fnR )
+
+        # Make the path for the disparity file.
+        fnD = fn.replace( "frames_cleanpass", "disparity" )
+        fnD = fnD.replace( ".png", ".pfm" )
+        allDisp.append( fnD )
+
+    # Search the "frames_cleanpass/TEST" directory recursively.
+    allTestImgL = sorted( glob.glob( rootPath + "/frames_cleanpass/TEST/**/left/*.png", recursive=True ) )
+
+    # Generate all filenames assuming they are all exist on the filesystem.
+    allTestImgR = []
+    allTestDisp = []
+
+    for fn in allTestImgL:
+        # Make the path for the right image.
+        fnR = fn.replace( "left", "right" )
+        allTestImgR.append( fnR )
+
+        # Make the path for the disparity file.
+        fnD = fn.replace( "frames_cleanpass", "disparity" )
+        fnD = fnD.replace( ".png", ".pfm" )
+        allTestDisp.append( fnD )
+
+    return allImgL, allImgR, allDisp, allTestImgL, allTestImgR, allTestDisp
+
 # Template for custom WorkFlow object.
 class MyWF(TorchFlow.TorchFlow):
     def __init__(self, workingDir, prefix = "", suffix = "", disableStreamLogger=False):
@@ -64,26 +111,56 @@ class MyWF(TorchFlow.TorchFlow):
         # === Create the AccumulatedObjects. ===
         self.add_accumulated_value("lossTest", 10)
 
-        # === Create a AccumulatedValuePlotter object for ploting. ===
-        self.AVP.append(\
-            WorkFlow.VisdomLinePlotter(\
-                "loss", self.AV, ["loss"], [True])\
-        )
-
-        self.AVP.append(\
-            WorkFlow.VisdomLinePlotter(\
-                "lossTest", self.AV, ["lossTest"], [True])\
-        )
-
-        # === Custom member variables. ===
+        # NN.
         self.countTrain = 0
         self.countTest  = 0
 
+        self.trainIntervalAccWrite = 10    # The interval to write the accumulated values.
+        self.trainIntervalAccPlot  = 1     # The interval to plot the accumulate values.
+        self.flagUseIntPlotter     = False # The flag of intermittent plotter.
+
         self.imgTrainLoader = None
         self.imgTestLoader  = None
+        self.datasetRootDir = "./"
+        self.dlBatchSize    = 2
+        self.dlShuffle      = True
+        self.dlNumWorkers   = 2
+        self.dlDropLast     = False
 
         self.model = None
+
+        self.readModelString    = ""
+        self.autoSaveModelLoops = 0 # The number of loops to perform an auto-saving of the model. 0 for disable.
+
         self.optimizer = None
+
+    def set_dataset_root_dir(self, d):
+        if ( False == os.path.isdir(d) ):
+            Exception("Dataset directory (%s) not exists." % (d))
+        
+        self.datasetRootDir = d
+
+    def set_data_loader_params(self, batchSize=2, shuffle=True, numWorkers=2, dropLast=False):
+        self.dlBatchSize  = batchSize
+        self.dlShuffle    = shuffle
+        self.dlNumWorkers = numWorkers
+        self.dlDropLast   = dropLast
+
+    def set_read_model(self, readModelString):
+        self.readModelString = readModelString
+
+    def enable_auto_save(self, loops):
+        self.autoSaveModelLoops = loops
+
+    def set_training_acc_params(self, intervalWrite, intervalPlot, flagInt=False):
+        self.trainIntervalAccWrite = intervalWrite
+        self.trainIntervalAccPlot  = intervalPlot
+        self.flagUseIntPlotter     = flagInt
+
+        if ( True == self.flagUseIntPlotter ):
+            if ( self.trainIntervalAccPlot <= RECOMMENDED_MIN_INTERMITTENT_PLOT_INTERVAL ):
+                self.logger.warning("When using the intermittent plotter. It is recommended that the plotting interval (%s) is higher than %d." % \
+                    ( self.trainIntervalAccPlot, RECOMMENDED_MIN_INTERMITTENT_PLOT_INTERVAL ) )
 
     # Overload the function initialize().
     def initialize(self):
@@ -99,8 +176,11 @@ class MyWF(TorchFlow.TorchFlow):
         # Get all the sample images.
         # imgTrainL, imgTrainR, dispTrain, imgTestL, imgTestR, dispTest \
         #     = list_files_sample("/home/yyhu/expansion/OriginalData/SceneFlow/Sampler/FlyingThings3D")
+        # imgTrainL, imgTrainR, dispTrain, imgTestL, imgTestR, dispTest \
+        #     = list_files_sample("/media/yaoyu/DiskE/SceneFlow/Sampler/FlyingThings3D")
+
         imgTrainL, imgTrainR, dispTrain, imgTestL, imgTestR, dispTest \
-            = list_files_sample("/media/yaoyu/DiskE/SceneFlow/Sampler/FlyingThings3D")
+            = list_files_sceneflow_FlyingThings( self.datasetRootDir )
 
         # Dataloader.
         if ( True == self.flagGrayscale ):
@@ -113,17 +193,26 @@ class MyWF(TorchFlow.TorchFlow):
 
         self.imgTrainLoader = torch.utils.data.DataLoader( \
             DA.myImageFolder( imgTrainL, imgTrainR, dispTrain, True, preprocessor=preprocessor ), \
-            batch_size=2, shuffle=True, num_workers=2, drop_last=False )
+            batch_size=self.dlBatchSize, shuffle=self.dlShuffle, num_workers=self.dlNumWorkers, drop_last=self.dlDropLast )
 
         self.imgTestLoader = torch.utils.data.DataLoader( \
-            DA.myImageFolder( imgTrainL, imgTrainR, dispTrain, False, preprocessor=preprocessor ), \
-            batch_size=2, shuffle=False, num_workers=2, drop_last=False )
+            DA.myImageFolder( imgTestL, imgTestR, dispTest, False, preprocessor=preprocessor ), \
+            batch_size=self.dlBatchSize, shuffle=self.dlShuffle, num_workers=self.dlNumWorkers, drop_last=self.dlDropLast )
 
         # Neural net.
         if ( True == self.flagGrayscale ):
             self.model = PyramidNet.PSMNet(1, 32, 64)
         else:
             self.model = PyramidNet.PSMNet(3, 32, 64)
+
+        # Check if we have to read the model from filesystem.
+        if ( "" != self.readModelString ):
+            modelFn = self.workingDir + "/models/" + self.readModelString
+
+            if ( False == os.path.isfile( modelFn ) ):
+                Exception("Model file (%s) does not exist." % ( modelFn ))
+
+            self.model = self.load_model( self.model, modelFn )
 
         self.model.cuda()
 
@@ -132,11 +221,32 @@ class MyWF(TorchFlow.TorchFlow):
 
         self.optimizer = optim.Adam( self.model.parameters(), lr=0.001, betas=(0.9, 0.999) )
 
+        # ======= AVP. ======
+        # === Create a AccumulatedValuePlotter object for ploting. ===
+        if ( True == self.flagUseIntPlotter ):
+            self.AVP.append(\
+                WorkFlow.PLTIntermittentPlotter(\
+                    self.workingDir + "/IntPlot", 
+                    "loss", self.AV, ["loss"], [True], semiLog=True) )
+
+            self.AVP.append(\
+                WorkFlow.PLTIntermittentPlotter(\
+                    self.workingDir + "/IntPlot", 
+                    "lossTest", self.AV, ["lossTest"], [True], semiLog=True) )
+        else:
+            self.AVP.append(\
+                WorkFlow.VisdomLinePlotter(\
+                    "loss", self.AV, ["loss"], [True], semiLog=True) )
+
+            self.AVP.append(\
+                WorkFlow.VisdomLinePlotter(\
+                    "lossTest", self.AV, ["lossTest"], [True], semiLog=True) )
+
         self.logger.info("Initialized.")
         self.post_initialize()
 
     # Overload the function train().
-    def train(self, imgL, imgR, disp):
+    def train(self, imgL, imgR, disp, episodeCount):
         super(MyWF, self).train()
 
         # === Custom code. ===
@@ -173,13 +283,21 @@ class MyWF(TorchFlow.TorchFlow):
 
         self.countTrain += 1
 
-        if ( self.countTrain % 10 == 0 ):
+        if ( self.countTrain % self.trainIntervalAccWrite == 0 ):
             self.write_accumulated_values()
 
         # Plot accumulated values.
-        self.plot_accumulated_values()
+        if ( self.countTrain % self.trainIntervalAccPlot == 0 ):
+            self.plot_accumulated_values()
 
-        self.logger.info("Loop #%d %s" % (self.countTrain, self.get_log_str()))
+        # Auto-save.
+        if ( 0 != self.autoSaveModelLoops ):
+            if ( self.countTrain % self.autoSaveModelLoops == 0 ):
+                modelName = "AutoSave_%06d" % ( self.countTrain )
+                self.logger.info("Auto-save the model.")
+                self.save_model( self.model, modelName )
+
+        self.logger.info("E%d, L%d: %s" % (episodeCount, self.countTrain, self.get_log_str()))
 
     # Overload the function test().
     def test(self):
@@ -198,6 +316,9 @@ class MyWF(TorchFlow.TorchFlow):
     def finalize(self):
         super(MyWF, self).finalize()
 
+        # Save the model.
+        self.save_model( self.model, "PSMNet" )
+
         # === Custom code. ===
         self.logger.info("Finalized.")
 
@@ -205,20 +326,23 @@ if __name__ == "__main__":
     print("Hello TyrPSMNet.")
 
     # Handle the arguments.
-    parser = argparse.ArgumentParser(description='Train pyramid stereo matching net.')
-
-    parser.add_argument("--grayscale", help = "Work on grayscale images.", action = "store_true", default = False)
-
-    args = parser.parse_args()
+    args = ArgumentParser.args
 
     print_delimeter(title = "Before WorkFlow initialization." )
 
     try:
         # Instantiate an object for MyWF.
-        wf = MyWF("./Debug", prefix = "Debug_", suffix = "_debug", disableStreamLogger=False)
+        wf = MyWF(args.working_dir, prefix=args.prefix, suffix=args.suffix, disableStreamLogger=False)
         wf.verbose = False
 
         wf.flagGrayscale = args.grayscale
+
+        # Set parameters.
+        wf.set_data_loader_params( args.dl_batch_size, not args.dl_disable_shuffle, args.dl_num_workers, args.dl_drop_last )
+        wf.set_dataset_root_dir( args.data_root_dir )
+        wf.set_read_model( args.read_model )
+        wf.enable_auto_save( args.auto_save_model )
+        wf.set_training_acc_params( args.train_interval_acc_write, args.train_interval_acc_plot, args.use_intermittent_plotter )
 
         # Initialization.
         print_delimeter(title = "Initialize.")
@@ -227,9 +351,9 @@ if __name__ == "__main__":
         # Training loop.
         print_delimeter(title = "Training loops.")
 
-        for i in range(5):
+        for i in range(args.train_episodes):
             for batchIdx, ( imgCropL, imgCropR, dispCrop ) in enumerate( wf.imgTrainLoader ):
-                wf.train( imgCropL, imgCropR, dispCrop )
+                wf.train( imgCropL, imgCropR, dispCrop, i )
 
         # # Test and finalize.
         # print_delimeter(title = "Test and finalize.")
