@@ -125,6 +125,8 @@ class MyWF(TorchFlow.TorchFlow):
         self.imgTestLoader  = None
         self.datasetRootDir = "./"
         self.dataEntries    = 0 # 0 for using all the data.
+        self.datasetTrain   = None # Should be an object of torch.utils.data.Dataset.
+        self.datasetTest    = None # Should be an object of torch.utils.data.Dataset.
         self.dlBatchSize    = 2
         self.dlShuffle      = True
         self.dlNumWorkers   = 2
@@ -203,12 +205,15 @@ class MyWF(TorchFlow.TorchFlow):
         else:
             preprocessor = PreProcess.get_transform(augment=False)
 
+        self.datasetTrain = DA.myImageFolder( imgTrainL, imgTrainR, dispTrain, True, preprocessor=preprocessor )
+        self.datasetTest  = DA.myImageFolder( imgTestL,  imgTestR,  dispTest, False, preprocessor=preprocessor )
+
         self.imgTrainLoader = torch.utils.data.DataLoader( \
-            DA.myImageFolder( imgTrainL, imgTrainR, dispTrain, True, preprocessor=preprocessor ), \
+            self.datasetTrain, \
             batch_size=self.dlBatchSize, shuffle=self.dlShuffle, num_workers=self.dlNumWorkers, drop_last=self.dlDropLast )
 
         self.imgTestLoader = torch.utils.data.DataLoader( \
-            DA.myImageFolder( imgTestL, imgTestR, dispTest, False, preprocessor=preprocessor ), \
+            self.datasetTest, \
             batch_size=self.dlBatchSize, shuffle=self.dlShuffle, num_workers=self.dlNumWorkers, drop_last=self.dlDropLast )
 
         # Neural net.
@@ -259,7 +264,7 @@ class MyWF(TorchFlow.TorchFlow):
         self.post_initialize()
 
     # Overload the function train().
-    def train(self, imgL, imgR, disp, episodeCount):
+    def train(self, imgL, imgR, disp, epochCount):
         super(MyWF, self).train()
 
         # === Custom code. ===
@@ -312,20 +317,44 @@ class MyWF(TorchFlow.TorchFlow):
                 self.logger.info("Auto-save the model.")
                 self.save_model( self.model, modelName )
 
-        self.logger.info("E%d, L%d: %s" % (episodeCount, self.countTrain, self.get_log_str()))
+        self.logger.info("E%d, L%d: %s" % (epochCount, self.countTrain, self.get_log_str()))
 
     # Overload the function test().
-    def test(self):
+    def test(self, imgL, imgR, disp, epochCount):
         super(MyWF, self).test()
 
         # === Custom code. ===
+
+        self.model.eval()
+        imgL = Variable( torch.FloatTensor( imgL ) )
+        imgR = Variable( torch.FloatTensor( imgR ) )
+
+        imgL = imgL.cuda()
+        imgR = imgR.cuda()
+
+        mask = disp < 192
+
+        with torch.no_grad():
+            output3 = self.model( imgL, imgR )
+
+        output = torch.squeeze( output3.data.cpu(), 1 )[:, 4:, :]
+
+        if ( len( disp[mask] ) == 0 ):
+            loss = 0
+        else:
+            loss = torch.mean( torch.abs( output[mask] - disp[mask] ) )
+
+        self.countTest += 1
+
         # Test the existance of an AccumulatedValue object.
         if ( True == self.have_accumulated_value("lossTest") ):
-            self.AV["lossTest"].push_back(0.01, self.countTest)
+            self.AV["lossTest"].push_back(loss.item(), self.countTest)
         else:
             self.logger.info("Could not find \"lossTest\"")
 
-        self.logger.info("Tested.")
+        self.plot_accumulated_values()
+
+        return loss.item()
 
     # Overload the function finalize().
     def finalize(self):
@@ -363,17 +392,49 @@ if __name__ == "__main__":
         print_delimeter(title = "Initialize.")
         wf.initialize()
 
-        # Training loop.
-        print_delimeter(title = "Training loops.")
+        # Get the number of test data.
+        nTests = len( wf.imgTestLoader )
+        wf.logger.info("The size of the test dataset is %s." % ( nTests ))
+        currentTestIdx = 0
 
-        for i in range(args.train_episodes):
-            for batchIdx, ( imgCropL, imgCropR, dispCrop ) in enumerate( wf.imgTrainLoader ):
-                # wf.logger.info( "imgCropL.shape = {}".format( imgCropL.shape ) )
-                # import ipdb; ipdb.set_trace()
-                wf.train( imgCropL, imgCropR, dispCrop, i )
+        if ( False == args.test ):
+            # Create the test data iterator.
+            iterTestData = iter( wf.imgTestLoader )
 
-        # # Test and finalize.
-        # print_delimeter(title = "Test and finalize.")
+            # Training loop.
+            wf.logger.info("Begin training.")
+            print_delimeter(title = "Training loops.")
+
+            for i in range(args.train_epochs):
+                for batchIdx, ( imgCropL, imgCropR, dispCrop ) in enumerate( wf.imgTrainLoader ):
+                    # wf.logger.info( "imgCropL.shape = {}".format( imgCropL.shape ) )
+                    # import ipdb; ipdb.set_trace()
+                    wf.train( imgCropL, imgCropR, dispCrop, i )
+
+                    # Check if we need a test.
+                    if ( 0 != args.test_loops ):
+                        if ( wf.countTrain % args.test_loops == 0 ):
+                            # Get test data.
+                            try:
+                                testImgL, testImgR, testDisp = next( iterTestData )
+                            except StopIteration:
+                                iterTestData = iter(wf.imgTestLoader)
+                                testImgL, testImgR, testDisp = next( iterTestData )
+
+                            # Perform test.
+                            wf.test( testImgL, testImgR, testDisp, i )
+        else:
+            wf.logger.info("Begin testing.")
+            print_delimeter(title="Testing loops.")
+
+            totalLoss = 0
+
+            for batchIdx, ( imgL, imgR, disp ) in enumerate( wf.imgTestLoader ):
+                loss = wf.test( imgL, imgR, disp, 0 )
+                wf.logger.info("Test %d, loss = %f." % ( batchIdx, loss ))
+                totalLoss += loss
+
+            wf.logger.info("Average loss = %f." % ( totalLoss / nTests ))
 
         # wf.test()
         wf.finalize()

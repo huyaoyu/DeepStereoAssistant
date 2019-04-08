@@ -37,8 +37,14 @@ parser.add_argument("--data-root-dir", type=str, default="./Data", \
 parser.add_argument("--data-entries", type=int, default=0, \
     help="Only use the first several entries of the dataset. This is for debug use. Set 0 for using all the data.")
 
-parser.add_argument("--train-episodes", type=int, default=10, \
-    help="The number of training episodes.")
+parser.add_argument("--train-epochs", type=int, default=10, \
+    help="The number of training epochs.")
+
+parser.add_argument("--test", action="store_true", default=False, \
+    help="Only perform test. Make sure to specify --read-model")
+
+parser.add_argument("--test-loops", type=int, default=0, \
+    help="The number of training loops between a test. Set 0 for not testing.")
 
 parser.add_argument("--train-interval-acc-write", type=int, default=10, \
     help="Write the accumulated data to filesystem by the number of loops specified.")

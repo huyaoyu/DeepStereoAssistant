@@ -63,7 +63,8 @@ class myImageFolder(data.Dataset):
         if self.training:  
             w, h = left_img.size
             # th, tw = 256, 512
-            th, tw = 528, 960
+            # th, tw = 528, 960
+            th, tw = 256, 960
  
             x1 = random.randint(0, w - tw)
             y1 = random.randint(0, h - th)
