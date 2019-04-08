@@ -353,6 +353,7 @@ if __name__ == "__main__":
 
         for i in range(args.train_episodes):
             for batchIdx, ( imgCropL, imgCropR, dispCrop ) in enumerate( wf.imgTrainLoader ):
+                # wf.logger.info( "imgCropL.shape = {}".format( imgCropL.shape ) )
                 wf.train( imgCropL, imgCropR, dispCrop, i )
 
         # # Test and finalize.
