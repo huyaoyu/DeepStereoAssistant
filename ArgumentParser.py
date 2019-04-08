@@ -16,6 +16,9 @@ parser.add_argument("--prefix", type=str, default="", \
 parser.add_argument("--suffix", type=str, default="", \
     help="The suffix o fthe work flow. The user should supply delimiters such as _ .")
 
+parser.add_argument("--multi-gpus", action="store_true", default=False, \
+    help="Use multiple GPUs.")
+
 parser.add_argument("--grayscale", action="store_true", default=False, \
     help="Work on grayscale images.")
 

@@ -132,12 +132,18 @@ class MyWF(TorchFlow.TorchFlow):
         self.dlNumWorkers   = 2
         self.dlDropLast     = False
 
-        self.model = None
+        self.model     = None
+        self.multiGPUs = False
 
         self.readModelString    = ""
         self.autoSaveModelLoops = 0 # The number of loops to perform an auto-saving of the model. 0 for disable.
 
         self.optimizer = None
+
+    def enable_multi_GPUs(self):
+        self.multiGPUs = True
+
+        self.logger.info("Enable multi-GPUs.")
 
     def set_dataset_root_dir(self, d, nEntries=0):
         if ( False == os.path.isdir(d) ):
@@ -145,6 +151,10 @@ class MyWF(TorchFlow.TorchFlow):
         
         self.datasetRootDir = d
         self.dataEntries    = nEntries
+
+        self.logger.info("Data root directory is %s." % ( self.datasetRootDir ))
+        if ( 0 != nEntries ):
+            self.logger.warning("Only %d entries of the training dataset will be used." % ( nEntries ))
 
     def set_data_loader_params(self, batchSize=2, shuffle=True, numWorkers=2, dropLast=False):
         self.dlBatchSize  = batchSize
@@ -155,8 +165,14 @@ class MyWF(TorchFlow.TorchFlow):
     def set_read_model(self, readModelString):
         self.readModelString = readModelString
 
+        if ( "" != self.readModelString ):
+            self.logger.info("Read model from %s." % ( self.readModelString ))
+
     def enable_auto_save(self, loops):
         self.autoSaveModelLoops = loops
+
+        if ( 0 != self.autoSaveModelLoops ):
+            self.logger.info("Auto save enabled with loops = %d." % (self.autoSaveModelLoops))
 
     def set_training_acc_params(self, intervalWrite, intervalPlot, flagInt=False):
         self.trainIntervalAccWrite = intervalWrite
@@ -230,6 +246,9 @@ class MyWF(TorchFlow.TorchFlow):
                 Exception("Model file (%s) does not exist." % ( modelFn ))
 
             self.model = self.load_model( self.model, modelFn )
+
+        if ( True == self.multiGPUs ):
+            self.model = nn.DataParallel(self.model)
 
         self.model.cuda()
 
@@ -378,6 +397,9 @@ if __name__ == "__main__":
         # Instantiate an object for MyWF.
         wf = MyWF(args.working_dir, prefix=args.prefix, suffix=args.suffix, disableStreamLogger=False)
         wf.verbose = False
+
+        if ( True == args.multi_gpus ):
+            wf.enable_multi_GPUs()
 
         wf.flagGrayscale = args.grayscale
 
