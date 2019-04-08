@@ -34,6 +34,9 @@ parser.add_argument("--dl-drop-last", action="store_true", default=False, \
 parser.add_argument("--data-root-dir", type=str, default="./Data", \
     help="The root directory of the dataset.")
 
+parser.add_argument("--data-entries", type=int, default=0, \
+    help="Only use the first several entries of the dataset. This is for debug use. Set 0 for using all the data.")
+
 parser.add_argument("--train-episodes", type=int, default=10, \
     help="The number of training episodes.")
 

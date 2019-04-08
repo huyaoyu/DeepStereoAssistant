@@ -16,6 +16,12 @@ import torchvision.transforms as transforms
 from . import IO
 from .. import PreProcess 
 
+# import sys
+
+# sys.path.insert(0, "/home/yaoyu/Projects/DeepStereoAssistant/DataLoader")
+# import IO
+# import PreProcess
+
 IMG_EXTENSIONS = [
     '.jpg', '.JPG', '.jpeg', '.JPEG',
     '.png', '.PNG', '.ppm', '.PPM', '.bmp', '.BMP',
@@ -48,49 +54,52 @@ class myImageFolder(data.Dataset):
         right = self.right[index]
         disp_L= self.disp_L[index]
 
-
         left_img = self.loader(left)
+        # import ipdb; ipdb.set_trace()
         right_img = self.loader(right)
         dataL, scaleL = self.dploader(disp_L)
         dataL = np.ascontiguousarray(dataL,dtype=np.float32)
 
-
-
         if self.training:  
-           w, h = left_img.size
-           th, tw = 256, 512
+            w, h = left_img.size
+            # th, tw = 256, 512
+            th, tw = 528, 960
  
-           x1 = random.randint(0, w - tw)
-           y1 = random.randint(0, h - th)
+            x1 = random.randint(0, w - tw)
+            y1 = random.randint(0, h - th)
 
-           left_img = left_img.crop((x1, y1, x1 + tw, y1 + th))
-           right_img = right_img.crop((x1, y1, x1 + tw, y1 + th))
+            left_img = left_img.crop((x1, y1, x1 + tw, y1 + th))
+            right_img = right_img.crop((x1, y1, x1 + tw, y1 + th))
 
-           dataL = dataL[y1:y1 + th, x1:x1 + tw]
+            dataL = dataL[y1:y1 + th, x1:x1 + tw]
 
         #    processed = PreProcess.get_transform(augment=False)  
         #    left_img   = processed(left_img)
         #    right_img  = processed(right_img)
 
-           if ( self.preprocessor is not None ):
-               left_img  = self.preprocessor(left_img)
-               right_img = self.preprocessor(right_img)
+            if ( self.preprocessor is not None ):
+                left_img  = self.preprocessor(left_img)
+                right_img = self.preprocessor(right_img)
 
-           return left_img, right_img, dataL
+            return left_img, right_img, dataL
         else:
-           w, h = left_img.size
-           left_img = left_img.crop((w-960, h-544, w, h))
-           right_img = right_img.crop((w-960, h-544, w, h))
+            w, h = left_img.size
+            left_img = left_img.crop((w-960, h-544, w, h))
+            right_img = right_img.crop((w-960, h-544, w, h))
         #    processed = PreProcess.get_transform(augment=False)  
         #    left_img       = processed(left_img)
         #    right_img      = processed(right_img)
 
-           if ( self.preprocessor is not None ):
-               left_img  = self.preprocessor(left_img)
-               right_img = self.preprocessor(right_img)
+            if ( self.preprocessor is not None ):
+                left_img  = self.preprocessor(left_img)
+                right_img = self.preprocessor(right_img)
 
-           return left_img, right_img, dataL
+            return left_img, right_img, dataL
 
     def __len__(self):
         return len(self.left)
+
+if __name__ == "__main__":    
+    img = default_loader("/media/yaoyu/DiskE/SceneFlow/Sampler/FlyingThings3D_Manually/frames_cleanpass/TRAIN/A/0000/left/0006.png")
+    import ipdb; ipdb.set_trace()
 

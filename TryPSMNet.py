@@ -111,6 +111,8 @@ class MyWF(TorchFlow.TorchFlow):
         # === Create the AccumulatedObjects. ===
         self.add_accumulated_value("lossTest", 10)
 
+        self.AV["loss"].avgWidth = 10
+
         # NN.
         self.countTrain = 0
         self.countTest  = 0
@@ -122,6 +124,7 @@ class MyWF(TorchFlow.TorchFlow):
         self.imgTrainLoader = None
         self.imgTestLoader  = None
         self.datasetRootDir = "./"
+        self.dataEntries    = 0 # 0 for using all the data.
         self.dlBatchSize    = 2
         self.dlShuffle      = True
         self.dlNumWorkers   = 2
@@ -134,11 +137,12 @@ class MyWF(TorchFlow.TorchFlow):
 
         self.optimizer = None
 
-    def set_dataset_root_dir(self, d):
+    def set_dataset_root_dir(self, d, nEntries=0):
         if ( False == os.path.isdir(d) ):
             Exception("Dataset directory (%s) not exists." % (d))
         
         self.datasetRootDir = d
+        self.dataEntries    = nEntries
 
     def set_data_loader_params(self, batchSize=2, shuffle=True, numWorkers=2, dropLast=False):
         self.dlBatchSize  = batchSize
@@ -182,6 +186,14 @@ class MyWF(TorchFlow.TorchFlow):
         imgTrainL, imgTrainR, dispTrain, imgTestL, imgTestR, dispTest \
             = list_files_sceneflow_FlyingThings( self.datasetRootDir )
 
+        if ( 0 != self.dataEntries ):
+            imgTrainL = imgTrainL[0:self.dataEntries]
+            imgTrainR = imgTrainR[0:self.dataEntries]
+            dispTrain = dispTrain[0:self.dataEntries]
+            imgTestL  = imgTestL[0:self.dataEntries]
+            imgTestR  = imgTestR[0:self.dataEntries]
+            dispTest  = dispTest[0:self.dataEntries]
+
         # Dataloader.
         if ( True == self.flagGrayscale ):
             preprocessor = transforms.Compose( [ \
@@ -219,7 +231,8 @@ class MyWF(TorchFlow.TorchFlow):
         self.logger.info("PSMNet has %d model parameters." % \
             ( sum( [ p.data.nelement() for p in self.model.parameters() ] ) ) )
 
-        self.optimizer = optim.Adam( self.model.parameters(), lr=0.001, betas=(0.9, 0.999) )
+        # self.optimizer = optim.Adam( self.model.parameters(), lr=0.001, betas=(0.9, 0.999) )
+        self.optimizer = optim.Adam( self.model.parameters(), lr=0.001 )
 
         # ======= AVP. ======
         # === Create a AccumulatedValuePlotter object for ploting. ===
@@ -274,6 +287,8 @@ class MyWF(TorchFlow.TorchFlow):
         loss = 0.5*F.smooth_l1_loss(out1[mask], disp[mask], reduction="mean") \
              + 0.7*F.smooth_l1_loss(out2[mask], disp[mask], reduction="mean") \
              +     F.smooth_l1_loss(out3[mask], disp[mask], reduction="mean")
+
+        # loss = F.smooth_l1_loss(out1[mask], disp[mask], reduction="mean")
 
         loss.backward()
 
@@ -339,7 +354,7 @@ if __name__ == "__main__":
 
         # Set parameters.
         wf.set_data_loader_params( args.dl_batch_size, not args.dl_disable_shuffle, args.dl_num_workers, args.dl_drop_last )
-        wf.set_dataset_root_dir( args.data_root_dir )
+        wf.set_dataset_root_dir( args.data_root_dir, args.data_entries )
         wf.set_read_model( args.read_model )
         wf.enable_auto_save( args.auto_save_model )
         wf.set_training_acc_params( args.train_interval_acc_write, args.train_interval_acc_plot, args.use_intermittent_plotter )
@@ -354,6 +369,7 @@ if __name__ == "__main__":
         for i in range(args.train_episodes):
             for batchIdx, ( imgCropL, imgCropR, dispCrop ) in enumerate( wf.imgTrainLoader ):
                 # wf.logger.info( "imgCropL.shape = {}".format( imgCropL.shape ) )
+                # import ipdb; ipdb.set_trace()
                 wf.train( imgCropL, imgCropR, dispCrop, i )
 
         # # Test and finalize.

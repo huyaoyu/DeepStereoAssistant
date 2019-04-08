@@ -352,6 +352,7 @@ class PSMNet(nn.Module):
 
         # Hourglass layers.
         out1, pre1, post1 = self.hg1( cost0, None, None )
+        # import ipdb; ipdb.set_trace()
         out1 = out1 + cost0
 
         out2, pre2, post2 = self.hg2( out1, pre1, post1 )
