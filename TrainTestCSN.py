@@ -26,6 +26,8 @@ class TTCSN(TrainTestBase):
         self.params = params
         self.criterion = torch.nn.SmoothL1Loss()
 
+        self.testResultSubfolder = "TestResults"
+
     # def initialize(self):
     #     self.check_frame()
     #     raise Exception("Not implemented.")
@@ -36,6 +38,9 @@ class TTCSN(TrainTestBase):
         self.frame.add_accumulated_value("lossTest", 10)
 
         self.frame.AV["loss"].avgWidth = 10
+
+        # Make the subfolder for the test results.
+        self.frame.make_subfolder(self.testResultSubfolder)
         
         # ======= AVP. ======
         # === Create a AccumulatedValuePlotter object for ploting. ===
@@ -184,7 +189,7 @@ class TTCSN(TrainTestBase):
             gdtDisp = gdtDisp / gdtDisp.max()
 
             # Create a matplotlib figure.
-            fig = plt.figure()
+            fig = plt.figure(figsize=(12.8, 9.6), dpi=300)
 
             ax = plt.subplot(2, 1, 1)
             plt.tight_layout()
@@ -199,7 +204,7 @@ class TTCSN(TrainTestBase):
             plt.imshow( outDisp )
 
             figName = "%s_%02d" % (identifier, i)
-            figName = self.frame.compose_file_name(figName, "png")
+            figName = self.frame.compose_file_name(figName, "png", subFolder=self.testResultSubfolder)
             plt.savefig(figName)
 
             plt.close(fig)

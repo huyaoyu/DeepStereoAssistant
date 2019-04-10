@@ -104,10 +104,10 @@ if __name__ == "__main__":
         wf.set_tt(tt)
 
         # CUDA stuff
-        if ( not ( "CUDA_VISIBLE_DEVICES" in os.environ ) ):
-            raise Exception("CUDA_VISIBLE_DEVICES not set")
-        else:
-            wf.logger.info("CUDA_VISIBLE_DEVICES = %s" % ( os.environ["CUDA_VISIBLE_DEVICES"] ))
+        # if ( not ( "CUDA_VISIBLE_DEVICES" in os.environ ) ):
+        #     raise Exception("CUDA_VISIBLE_DEVICES not set")
+        # else:
+        #     wf.logger.info("CUDA_VISIBLE_DEVICES = %s" % ( os.environ["CUDA_VISIBLE_DEVICES"] ))
 
         if ( True == args.multi_gpus ):
             tt.enable_multi_GPUs()
