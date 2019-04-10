@@ -44,6 +44,8 @@ class TrainTestBase(object):
         self.dlShuffle      = True
         self.dlNumWorkers   = 2
         self.dlDropLast     = False
+        self.dlCropTrain    = (0, 0) # (0, 0) for disable.
+        self.dlCropTest     = (0, 0) # (0, 0) for disable.
 
         self.model     = None
         self.multiGPUs = False
@@ -100,13 +102,15 @@ class TrainTestBase(object):
         if ( 0 != nEntries ):
             self.frame.logger.warning("Only %d entries of the training dataset will be used." % ( nEntries ))
 
-    def set_data_loader_params(self, batchSize=2, shuffle=True, numWorkers=2, dropLast=False):
+    def set_data_loader_params(self, batchSize=2, shuffle=True, numWorkers=2, dropLast=False, cropTrain=(0, 0), cropTest=(0, 0)):
         self.check_frame()
 
         self.dlBatchSize  = batchSize
         self.dlShuffle    = shuffle
         self.dlNumWorkers = numWorkers
         self.dlDropLast   = dropLast
+        self.dlCropTrain  = cropTrain
+        self.dlCropTest   = cropTest
 
     def set_read_model(self, readModelString):
         self.check_frame()
@@ -174,8 +178,8 @@ class TrainTestBase(object):
         else:
             preprocessor = PreProcess.get_transform(augment=False)
 
-        self.datasetTrain = DA.myImageFolder( imgTrainL, imgTrainR, dispTrain, True, preprocessor=preprocessor )
-        self.datasetTest  = DA.myImageFolder( imgTestL,  imgTestR,  dispTest, False, preprocessor=preprocessor )
+        self.datasetTrain = DA.myImageFolder( imgTrainL, imgTrainR, dispTrain, True, preprocessor=preprocessor, cropSize=self.dlCropTrain )
+        self.datasetTest  = DA.myImageFolder( imgTestL,  imgTestR,  dispTest, False, preprocessor=preprocessor, cropSize=self.dlCropTest )
 
         self.imgTrainLoader = torch.utils.data.DataLoader( \
             self.datasetTrain, \

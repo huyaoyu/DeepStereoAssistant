@@ -37,7 +37,9 @@ def disparity_loader(path):
     return IO.readPFM(path)
 
 class myImageFolder(data.Dataset):
-    def __init__(self, left, right, left_disparity, training, loader=default_loader, dploader= disparity_loader, preprocessor=None):
+    def __init__(self, left, right, left_disparity, training, \
+        loader=default_loader, dploader= disparity_loader, preprocessor=None, \
+        cropSize=(0,0)):
  
         self.left = left
         self.right = right
@@ -47,7 +49,8 @@ class myImageFolder(data.Dataset):
         self.training = training
 
         # Modified.
-        self.preprocessor = preprocessor
+        self.preprocessor  = preprocessor
+        self.cropSize = cropSize
 
     def __getitem__(self, index):
         left  = self.left[index]
@@ -62,9 +65,14 @@ class myImageFolder(data.Dataset):
 
         if self.training:  
             w, h = left_img.size
-            # th, tw = 256, 512
-            # th, tw = 528, 960
-            th, tw = 256, 960
+
+            if ( self.cropSize[0] <= 0 or self.cropSize[1] <= 0):
+                th, tw = h, w
+            else:
+                # th, tw = 256, 512
+                # th, tw = 528, 960
+                # th, tw = 256, 960
+                th, tw = self.cropSize[0], self.cropSize[1]
  
             x1 = random.randint(0, w - tw)
             y1 = random.randint(0, h - th)
@@ -85,8 +93,14 @@ class myImageFolder(data.Dataset):
             return left_img, right_img, dataL
         else:
             w, h = left_img.size
-            left_img = left_img.crop((w-960, h-544, w, h))
-            right_img = right_img.crop((w-960, h-544, w, h))
+
+            if ( self.cropSize[0] <= 0 or self.cropSize[1] <= 0 ):
+                ch, cw = h, w
+            else:
+                ch, cw = self.cropSize[0], self.cropSize[1]
+
+            left_img  = left_img.crop( (w-cw, h-ch, w, h))
+            right_img = right_img.crop((w-cw, h-ch, w, h))
         #    processed = PreProcess.get_transform(augment=False)  
         #    left_img       = processed(left_img)
         #    right_img      = processed(right_img)

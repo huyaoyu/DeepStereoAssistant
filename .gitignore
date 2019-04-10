@@ -9,4 +9,5 @@ debug*/
 Data/
 data/
 WD*/
+*.pth
 

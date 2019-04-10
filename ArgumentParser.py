@@ -34,6 +34,12 @@ parser.add_argument("--dl-disable-shuffle", action="store_true", default=False, 
 parser.add_argument("--dl-num-workers", type=int, default=2, \
     help="The number of workers of the dataloader.")
 
+parser.add_argument("--dl-crop-train", type=str, default="0, 0", \
+    help="The the h-crop and w-crop size during training. \"0, 0\" for disable.")
+
+parser.add_argument("--dl-crop-test", type=str, default="0, 0", \
+    help="The the h-crop and w-crop size during testing. \"0, 0\" for disable")
+
 parser.add_argument("--dl-drop-last", action="store_true", default=False, \
     help="The drop-last switch of the dataloader.")
 
@@ -68,3 +74,19 @@ parser.add_argument("--disable-stream-logger", action="store_true", default=Fals
     help="Disable the stream logger of WorkFlow.")
 
 args = parser.parse_args()
+
+def convert_str_2_int_list(s, d=","):
+    """
+    Convert a string of integers into a list.
+    s: The input string.
+    d: The delimiter.
+    """
+
+    ss = s.split(d)
+
+    temp = []
+
+    for t in ss:
+        temp.append( int(t) )
+
+    return temp

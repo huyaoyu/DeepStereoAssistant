@@ -78,7 +78,7 @@ class TTCSN(TrainTestBase):
         if ( True == self.flagGrayscale ):
             raise Exception("Grayscale is not implemented for CSN yet.")
         else:
-            self.model = ConvolutionalStereoNet()
+            self.model = ConvolutionalStereoNet( self.params["preTrainedVGG"] )
 
         # Check if we have to read the model from filesystem.
         if ( "" != self.readModelString ):
@@ -163,10 +163,13 @@ class TTCSN(TrainTestBase):
         # Forward.
         with torch.no_grad():
             output = md( image0, image1 )
-            output = output[:, :, 4:, :]
+            # output = output[:, :, 4:, :]
         
         outputTemp = torch.squeeze( output.data.cpu(), 1 )
 
+        dispStartingIndex = disparity0.shape[1] - outputTemp.shape[1]
+
+        disparity0 = disparity0[ :, dispStartingIndex:, :]
         loss   = cri( outputTemp, disparity0 )
 
         # # Handle the loss value.

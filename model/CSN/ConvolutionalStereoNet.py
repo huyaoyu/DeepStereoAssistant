@@ -14,33 +14,72 @@ import torch.nn.functional as F
 # os.environ["CUDA_DEVICE_ORDER"]    = "PCI_BUS_ID" 
 # os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
+# CONV_NET_DICT = {
+#     "convNets_FX": [
+#         {"inChannels":   3, "outChannels":  32, "kernelSize": 3, "stride": 1, "padding": 1},
+#         {"inChannels":  32, "outChannels":  32, "kernelSize": 3, "stride": 1, "padding": 1},
+#         {"inChannels":  32, "outChannels":  64, "kernelSize": 3, "stride": 1, "padding": 1},
+#         {"inChannels":  64, "outChannels":  64, "kernelSize": 3, "stride": 1, "padding": 1},
+#         {"inChannels":  64, "outChannels": 128, "kernelSize": 3, "stride": 1, "padding": 1},
+#         {"inChannels": 128, "outChannels": 128, "kernelSize": 3, "stride": 1, "padding": 1}
+#     ],
+#     "convNets_FX_Cat": [
+#         {"inChannels":  64, "outChannels":  32, "kernelSize": 1, "stride": 1, "padding": 0},
+#         {"inChannels": 128, "outChannels":  32, "kernelSize": 1, "stride": 1, "padding": 0}
+#     ],
+#     "convNets_ToExp": [
+#         {"inChannels": 198, "outChannels": 128, "kernelSize": 1, "stride": 1, "padding": 0}
+#     ],
+#     "convNets_Exp": [
+#         {"inChannels": 128, "outChannels": 128, "kernelSize": 4, "stride": 2, "padding": 1},
+#         {"inChannels": 128, "outChannels": 256, "kernelSize": 4, "stride": 2, "padding": 1},
+#         {"inChannels": 256, "outChannels": 256, "kernelSize": 4, "stride": 2, "padding": 1},
+#         {"inChannels": 256, "outChannels": 512, "kernelSize": 4, "stride": 2, "padding": 1}
+#     ],
+#     "convNets_Cnt": [
+#         {"inChannels": 512, "outChannels": 256, "kernelSize": 4, "stride": 2, "padding": 1},
+#         {"inChannels": 512, "outChannels": 256, "kernelSize": 4, "stride": 2, "padding": 1},
+#         {"inChannels": 512, "outChannels": 128, "kernelSize": 4, "stride": 2, "padding": 1},
+#         {"inChannels": 256, "outChannels": 128, "kernelSize": 4, "stride": 2, "padding": 1},
+#     ],
+#     "convNets_DR": [
+#         {"inChannels": 256, "outChannels":  64, "kernelSize": 1, "stride": 1, "padding": 0},
+#         {"inChannels":  64, "outChannels":   1, "kernelSize": 1, "stride": 1, "padding": 0},
+#     ]
+# }
+
 CONV_NET_DICT = {
     "convNets_FX": [
-        {"inChannels":   3, "outChannels":  32, "kernelSize": 3, "stride": 1, "padding": 1},
-        {"inChannels":  32, "outChannels":  32, "kernelSize": 3, "stride": 1, "padding": 1},
-        {"inChannels":  32, "outChannels":  64, "kernelSize": 3, "stride": 1, "padding": 1},
+        {"inChannels":   3, "outChannels":  64, "kernelSize": 3, "stride": 1, "padding": 1},
         {"inChannels":  64, "outChannels":  64, "kernelSize": 3, "stride": 1, "padding": 1},
         {"inChannels":  64, "outChannels": 128, "kernelSize": 3, "stride": 1, "padding": 1},
-        {"inChannels": 128, "outChannels": 128, "kernelSize": 3, "stride": 1, "padding": 1}
+        {"inChannels": 128, "outChannels": 128, "kernelSize": 3, "stride": 1, "padding": 1},
+        {"inChannels": 128, "outChannels": 256, "kernelSize": 3, "stride": 1, "padding": 1},
+        {"inChannels": 256, "outChannels": 256, "kernelSize": 3, "stride": 1, "padding": 1},
+        {"inChannels": 256, "outChannels": 256, "kernelSize": 3, "stride": 1, "padding": 1},
     ],
     "convNets_FX_Cat": [
-        {"inChannels":  64, "outChannels":  32, "kernelSize": 1, "stride": 1, "padding": 0},
-        {"inChannels": 128, "outChannels":  32, "kernelSize": 1, "stride": 1, "padding": 0}
+        {"inChannels": 128, "outChannels":  64, "kernelSize": 1, "stride": 1, "padding": 0},
+        {"inChannels": 256, "outChannels":  64, "kernelSize": 1, "stride": 1, "padding": 0}
     ],
     "convNets_ToExp": [
-        {"inChannels": 198, "outChannels": 128, "kernelSize": 1, "stride": 1, "padding": 0}
+        {"inChannels": 390, "outChannels": 128, "kernelSize": 1, "stride": 1, "padding": 0}
     ],
     "convNets_Exp": [
         {"inChannels": 128, "outChannels": 128, "kernelSize": 4, "stride": 2, "padding": 1},
+        {"inChannels": 128, "outChannels": 128, "kernelSize": 4, "stride": 2, "padding": 1},
         {"inChannels": 128, "outChannels": 256, "kernelSize": 4, "stride": 2, "padding": 1},
         {"inChannels": 256, "outChannels": 256, "kernelSize": 4, "stride": 2, "padding": 1},
-        {"inChannels": 256, "outChannels": 512, "kernelSize": 4, "stride": 2, "padding": 1}
+        {"inChannels": 256, "outChannels": 512, "kernelSize": 4, "stride": 2, "padding": 1},
+        {"inChannels": 512, "outChannels": 512, "kernelSize": 4, "stride": 2, "padding": 1}
     ],
     "convNets_Cnt": [
+        {"inChannels": 512, "outChannels": 512, "kernelSize": 4, "stride": 2, "padding": 1},
+        {"inChannels":1024, "outChannels": 512, "kernelSize": 4, "stride": 2, "padding": 1},
+        {"inChannels": 768, "outChannels": 256, "kernelSize": 4, "stride": 2, "padding": 1},
         {"inChannels": 512, "outChannels": 256, "kernelSize": 4, "stride": 2, "padding": 1},
-        {"inChannels": 512, "outChannels": 256, "kernelSize": 4, "stride": 2, "padding": 1},
-        {"inChannels": 512, "outChannels": 128, "kernelSize": 4, "stride": 2, "padding": 1},
-        {"inChannels": 256, "outChannels": 128, "kernelSize": 4, "stride": 2, "padding": 1},
+        {"inChannels": 384, "outChannels": 128, "kernelSize": 4, "stride": 2, "padding": 1},
+        {"inChannels": 256, "outChannels": 128, "kernelSize": 4, "stride": 2, "padding": 1}
     ],
     "convNets_DR": [
         {"inChannels": 256, "outChannels":  64, "kernelSize": 1, "stride": 1, "padding": 0},
@@ -48,8 +87,18 @@ CONV_NET_DICT = {
     ]
 }
 
+PRE_TRAIN_MAP = {
+    'fx.0':"features.0",  'fx_bn.0':"features.1", \
+    'fx.1':"features.3",  'fx_bn.1':"features.4", \
+    'fx.2':"features.7",  'fx_bn.2':"features.8", \
+    'fx.3':"features.10", 'fx_bn.3':"features.11", \
+    'fx.4':"features.14", 'fx_bn.4':"features.15", \
+    'fx.5':"features.17", 'fx_bn.5':"features.18", \
+    'fx.6':"features.20", 'fx_bn.6':"features.21"
+    }
+
 class ConvolutionalStereoNet(nn.Module):
-    def __init__(self):
+    def __init__(self, preTrainedVGGPath=None):
         super(ConvolutionalStereoNet, self).__init__()
 
         # Declare each layer.
@@ -128,6 +177,9 @@ class ConvolutionalStereoNet(nn.Module):
 
         self._initialize_weights()
 
+        if ( preTrainedVGGPath is not None ):
+            self.load_pretrained_VGG(preTrainedVGGPath)
+
     def _initialize_weights(self):
         for m in self.fx:
             n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
@@ -175,6 +227,51 @@ class ConvolutionalStereoNet(nn.Module):
             m.weight.data.fill_(1)
             m.bias.data.zero_()
 
+    # return a generator for pre-loaded weights for adjusting the learning rate
+    def preLoadedParamsGen(self,loadDict):
+        for name,param in self.named_parameters():
+            if name in loadDict.keys():
+                yield param
+
+    def paramsGen(self,loadDict):
+        for name,param in self.named_parameters():
+            if name not in loadDict.keys():
+                yield param
+
+    def load_pretrained_VGG(self, preTrainModel):
+        preTrainDict = torch.load(preTrainModel)
+
+        modelDict = self.state_dict()
+
+        loadDict = {}
+        # import ipdb; ipdb.set_trace()
+        for k,v in modelDict.items():
+            keys = k.split('.')
+
+            if ( "num_batches_tracked" == keys[-1] ):
+                continue
+
+            localKey = keys[0] + "." + keys[1]
+
+            if localKey in PRE_TRAIN_MAP: # compansate for naming bug
+                k2 = PRE_TRAIN_MAP[ localKey ] + '.'+ keys[-1]
+                
+                loadDict[k] = preTrainDict[k2]
+                
+                print('Load pretrained layer: %s -> %s' % (k2, k))
+        
+        modelDict.update(loadDict)
+
+        self.load_state_dict(modelDict)
+        # import ipdb; ipdb.set_trace()
+
+        # self.preLoadedParams = self.preLoadedParamsGen(loadDict)
+        # self.params = self.paramsGen(loadDict)
+
+        # for param in self.preLoadedParams:
+        # 	param.requires_grad = False # fix the weights for the pre-loaded layers
+        # 	# print param.requires_grad
+
     def feature_extract(self, x):
         # Manually run through each layer!!!
         out  = self.fx[0](x)
@@ -203,7 +300,11 @@ class ConvolutionalStereoNet(nn.Module):
         out  = F.relu(out, inplace = True)
 
         out  = self.fx[5](out)
-        cat3 = self.fx_bn[5](out)
+        out  = self.fx_bn[5](out)
+        out  = F.relu(out, inplace = True)
+
+        out  = self.fx[6](out)
+        cat3 = self.fx_bn[6](out)
         sizeCat3 = cat1.size()
         # cat3 = F.interpolate( cat3, scale_factor = 4, mode = "bilinear", align_corners = True )
         cat3 = F.interpolate( cat3, size = ( sizeCat3[2], sizeCat3[3] ), mode = "bilinear", align_corners = True )

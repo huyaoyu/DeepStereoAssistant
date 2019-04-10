@@ -89,6 +89,10 @@ if __name__ == "__main__":
     params = json.load(fp)
     fp.close()
 
+    # Handle the crop settings.
+    cropTrain = ArgumentParser.convert_str_2_int_list( args.dl_crop_train )
+    cropTest  = ArgumentParser.convert_str_2_int_list( args.dl_crop_test )
+
     print("%s" % (params["jobName"]))
 
     print_delimeter(title = "Before WorkFlow initialization." )
@@ -115,7 +119,9 @@ if __name__ == "__main__":
         tt.flagGrayscale = args.grayscale
 
         # Set parameters.
-        tt.set_data_loader_params( args.dl_batch_size, not args.dl_disable_shuffle, args.dl_num_workers, args.dl_drop_last )
+        tt.set_data_loader_params( \
+            args.dl_batch_size, not args.dl_disable_shuffle, args.dl_num_workers, args.dl_drop_last, \
+            cropTrain=cropTrain, cropTest=cropTest )
         tt.set_dataset_root_dir( args.data_root_dir, args.data_entries )
         tt.set_read_model( args.read_model )
         tt.enable_auto_save( args.auto_save_model )
