@@ -112,7 +112,13 @@ class TTCSN(TrainTestBase):
         
         # Forward.
         output = md( image0, image1 )
-        loss   = cri( output, disparity0 )
+
+        mask = disparity0 < 500
+        mask.detach_()
+
+        output = output.squeeze( 1 )
+
+        loss   = cri( output[mask], disparity0[mask] )
 
         # Handle the loss value.
         self.frame.AV["loss"].push_back( loss.item() )
@@ -170,7 +176,11 @@ class TTCSN(TrainTestBase):
         dispStartingIndex = disparity0.shape[1] - outputTemp.shape[1]
 
         disparity0 = disparity0[ :, dispStartingIndex:, :]
-        loss   = cri( outputTemp, disparity0 )
+
+        mask = disparity0 < 500
+        mask.detach_()
+
+        loss   = cri( outputTemp[mask], disparity0[mask] )
 
         # # Handle the loss value.
         # plotX = self.countTrain - 1
