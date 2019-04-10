@@ -1,12 +1,14 @@
 from __future__ import print_function
 
+import torch
+from torch.autograd import Variable
+import torch.nn.functional as F
+import torch.optim as optim
+
 from workflow import WorkFlow, TorchFlow
 
 from TrainTestBase import TrainTestBase
 
-from DataLoader.SceneFlow import Loader as DA
-from DataLoader import PreProcess
-from DataLoader.SceneFlow.utils import list_files_sceneflow_FlyingThings
 from model import PyramidNet
 
 class TTPSMNet(TrainTestBase):
@@ -15,7 +17,7 @@ class TTPSMNet(TrainTestBase):
 
     # def initialize(self):
     #     self.check_frame()
-    #     Exception("Not implemented.")
+    #     raise Exception("Not implemented.")
 
     # Overload parent's function.
     def init_workflow(self):
@@ -46,13 +48,13 @@ class TTPSMNet(TrainTestBase):
                     "lossTest", self.frame.AV, ["lossTest"], [True], semiLog=True) )
 
     # def init_workflow(self):
-    #     Exception("Not implemented.")
+    #     raise Exception("Not implemented.")
 
     # def init_torch(self):
-    #     Exception("Not implemented.")
+    #     raise Exception("Not implemented.")
 
     # def init_data(self):
-    #     Exception("Not implemented.")
+    #     raise Exception("Not implemented.")
 
     # Overload parent's function.
     def init_model(self):
@@ -67,7 +69,7 @@ class TTPSMNet(TrainTestBase):
             modelFn = self.frame.workingDir + "/models/" + self.readModelString
 
             if ( False == os.path.isfile( modelFn ) ):
-                Exception("Model file (%s) does not exist." % ( modelFn ))
+                raise Exception("Model file (%s) does not exist." % ( modelFn ))
 
             self.model = self.frame.load_model( self.model, modelFn )
 
@@ -75,7 +77,7 @@ class TTPSMNet(TrainTestBase):
             ( sum( [ p.data.nelement() for p in self.model.parameters() ] ) ) )
     
     # def post_init_model(self):
-    #     Exception("Not implemented.")
+    #     raise Exception("Not implemented.")
 
     # Overload parent's function.
     def init_optimizer(self):

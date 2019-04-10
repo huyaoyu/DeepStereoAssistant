@@ -1,5 +1,7 @@
 from __future__ import print_function
 
+import os
+
 import torch
 import torch.nn as nn
 import torch.nn.parallel
@@ -10,6 +12,10 @@ import torch.nn.functional as F
 import torchvision.transforms as transforms
 
 from workflow import WorkFlow, TorchFlow
+
+from DataLoader.SceneFlow import Loader as DA
+from DataLoader import PreProcess
+from DataLoader.SceneFlow.utils import list_files_sceneflow_FlyingThings
 
 RECOMMENDED_MIN_INTERMITTENT_PLOT_INTERVAL = 100
 
@@ -72,7 +78,7 @@ class TrainTestBase(object):
     
     def check_frame(self):
         if ( self.frame is None ):
-            Exception("self.frame must not be None.")
+            raise Exception("self.frame must not be None.")
     
     def enable_multi_GPUs(self):
         self.check_frame()
@@ -85,7 +91,7 @@ class TrainTestBase(object):
         self.check_frame()
 
         if ( False == os.path.isdir(d) ):
-            Exception("Dataset directory (%s) not exists." % (d))
+            raise Exception("Dataset directory (%s) not exists." % (d))
         
         self.datasetRootDir = d
         self.dataEntries    = nEntries
@@ -131,7 +137,7 @@ class TrainTestBase(object):
                     ( self.trainIntervalAccPlot, RECOMMENDED_MIN_INTERMITTENT_PLOT_INTERVAL ) )
 
     def init_workflow(self):
-        Exception("init_workflow() virtual interface.")
+        raise Exception("init_workflow() virtual interface.")
 
     def init_torch(self):
         self.check_frame()
@@ -180,7 +186,7 @@ class TrainTestBase(object):
             batch_size=1, shuffle=False, num_workers=self.dlNumWorkers, drop_last=self.dlDropLast )
 
     def init_model(self):
-        Exception("init_model() virtual interface.")
+        raise Exception("init_model() virtual interface.")
 
     def post_init_model(self):
         if ( True == self.multiGPUs ):
@@ -189,4 +195,4 @@ class TrainTestBase(object):
         self.model.cuda()
     
     def init_optimizer(self):
-        Exception("init_optimizer() virtual interface.")
+        raise Exception("init_optimizer() virtual interface.")

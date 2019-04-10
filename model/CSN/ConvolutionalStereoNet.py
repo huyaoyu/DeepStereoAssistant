@@ -11,8 +11,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 # The solution is found on https://github.com/pytorch/pytorch/issues/1901
-os.environ["CUDA_DEVICE_ORDER"]    = "PCI_BUS_ID" 
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+# os.environ["CUDA_DEVICE_ORDER"]    = "PCI_BUS_ID" 
+# os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
 CONV_NET_DICT = {
     "convNets_FX": [

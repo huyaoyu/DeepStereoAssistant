@@ -1,6 +1,9 @@
 
 from __future__ import print_function
 
+import json
+import os
+
 from workflow import WorkFlow, TorchFlow
 
 import ArgumentParser
@@ -79,6 +82,9 @@ if __name__ == "__main__":
     args = ArgumentParser.args
 
     # Load the input json file.
+    if ( "" == args.input ):
+        raise Exception("--input must be issued as an argument.")
+    
     fp = open( args.input, "r" )
     params = json.load(fp)
     fp.close()
@@ -93,9 +99,15 @@ if __name__ == "__main__":
         wf.verbose = False
 
         # Cross reference.
-        tt = TTPSMNet(wf.workingDir, wf)
+        tt = TTCSN(params, wf.workingDir, wf)
         tt.params = params
         wf.set_tt(tt)
+
+        # CUDA stuff
+        if ( not ( "CUDA_VISIBLE_DEVICES" in os.environ ) ):
+            raise Exception("CUDA_VISIBLE_DEVICES not set")
+        else:
+            wf.logger.info("CUDA_VISIBLE_DEVICES = %s" % ( os.environ["CUDA_VISIBLE_DEVICES"] ))
 
         if ( True == args.multi_gpus ):
             tt.enable_multi_GPUs()

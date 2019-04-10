@@ -1,12 +1,14 @@
 from __future__ import print_function
 
+import torch
+from torch.autograd import Variable
+import torch.nn.functional as F
+import torch.optim as optim
+
 from workflow import WorkFlow, TorchFlow
 
 from TrainTestBase import TrainTestBase
 
-from DataLoader.SceneFlow import Loader as DA
-from DataLoader import PreProcess
-from DataLoader.SceneFlow.utils import list_files_sceneflow_FlyingThings
 from model.CSN.ConvolutionalStereoNet import ConvolutionalStereoNet
 
 import os
@@ -17,15 +19,16 @@ if ( not ( "DISPLAY" in os.environ ) ):
     print("TrainTestCSN: Switch the backend of matplotlib to agg.")
 
 class TTCSN(TrainTestBase):
-    def __init__(self, workingDir, frame=None):
+    def __init__(self, params, workingDir, frame=None):
         super(TTCSN, self).__init__( workingDir, frame )
 
+        self.wd = workingDir
         self.params = params
         self.criterion = torch.nn.SmoothL1Loss()
 
     # def initialize(self):
     #     self.check_frame()
-    #     Exception("Not implemented.")
+    #     raise Exception("Not implemented.")
 
     # Overload parent's function.
     def init_workflow(self):
@@ -56,19 +59,19 @@ class TTCSN(TrainTestBase):
                     "lossTest", self.frame.AV, ["lossTest"], [True], semiLog=True) )
 
     # def init_workflow(self):
-    #     Exception("Not implemented.")
+    #     raise Exception("Not implemented.")
 
     # def init_torch(self):
-    #     Exception("Not implemented.")
+    #     raise Exception("Not implemented.")
 
     # def init_data(self):
-    #     Exception("Not implemented.")
+    #     raise Exception("Not implemented.")
 
     # Overload parent's function.
     def init_model(self):
         # Neural net.
         if ( True == self.flagGrayscale ):
-            Exception("Grayscale is not implemented for CSN yet.")
+            raise Exception("Grayscale is not implemented for CSN yet.")
         else:
             self.model = ConvolutionalStereoNet()
 
@@ -77,7 +80,7 @@ class TTCSN(TrainTestBase):
             modelFn = self.frame.workingDir + "/models/" + self.readModelString
 
             if ( False == os.path.isfile( modelFn ) ):
-                Exception("Model file (%s) does not exist." % ( modelFn ))
+                raise Exception("Model file (%s) does not exist." % ( modelFn ))
 
             self.model = self.frame.load_model( self.model, modelFn )
 
@@ -85,7 +88,7 @@ class TTCSN(TrainTestBase):
             ( sum( [ p.data.nelement() for p in self.model.parameters() ] ) ) )
     
     # def post_init_model(self):
-    #     Exception("Not implemented.")
+    #     raise Exception("Not implemented.")
 
     # Overload parent's function.
     def init_optimizer(self):
@@ -155,21 +158,24 @@ class TTCSN(TrainTestBase):
         # Forward.
         with torch.no_grad():
             output = md( image0, image1 )
+            output = output[:, :, 4:, :]
         
-        loss   = cri( output, disparity0 )
+        outputTemp = torch.squeeze( output.data.cpu(), 1 )
 
-        # Handle the loss value.
-        plotX = self.countTrain - 1
-        if ( plotX < 0 ):
-            plotX = 0
-        self.frame.AV["lossTest"].push_back( loss.item(), plotX )
+        loss   = cri( outputTemp, disparity0 )
+
+        # # Handle the loss value.
+        # plotX = self.countTrain - 1
+        # if ( plotX < 0 ):
+        #     plotX = 0
+        # self.frame.AV["lossTest"].push_back( loss.item(), plotX )
 
         # Save the test result.
         batchSize = output.size()[0]
         
         for i in range(batchSize):
             outDisp = output[i, 0, :, :].detach().cpu().numpy()
-            gdtDisp = disparity0[i, 0, :, :].detach().cpu().numpy()
+            gdtDisp = disparity0[i, :, :].detach().cpu().numpy()
 
             outDisp = outDisp - outDisp.min()
             gdtDisp = gdtDisp - outDisp.min()
