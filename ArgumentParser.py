@@ -7,6 +7,9 @@ parser = argparse.ArgumentParser(description='Train pyramid stereo matching net.
 parser.add_argument("--working-dir", type=str, default="./Debug", \
     help="The working directory.")
 
+parser.add_argument("--input", type=str, default="", \
+    help="The filename of the input JSON file.")
+
 parser.add_argument("--read-model", type=str, default="", \
     help="Real model from working directory. Supply empty string for not reading model.")
 

@@ -1,0 +1,6 @@
+{
+    "jobName": "CSNJob",
+    "downSampleRatio": 2,
+    "torchOptimLearningRate": 1e-4,
+    "downSampleRatioTest": 4
+}

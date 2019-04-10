@@ -5,7 +5,7 @@ from workflow import WorkFlow, TorchFlow
 
 import ArgumentParser
 
-from TrainTestPSMNet import TTPSMNet
+from TrainTestCSN import TTCSN
 
 def print_delimeter(c = "=", n = 20, title = "", leading = "\n", ending = "\n"):
     d = [c for i in range( int(n/2) )]
@@ -73,10 +73,17 @@ class MyWF(TorchFlow.TorchFlow):
         self.logger.info("Finalized.")
 
 if __name__ == "__main__":
-    print("Hello TyrPSMNet.")
+    print("Hello Run_CSN")
 
     # Handle the arguments.
     args = ArgumentParser.args
+
+    # Load the input json file.
+    fp = open( args.input, "r" )
+    params = json.load(fp)
+    fp.close()
+
+    print("%s" % (params["jobName"]))
 
     print_delimeter(title = "Before WorkFlow initialization." )
 
@@ -87,6 +94,7 @@ if __name__ == "__main__":
 
         # Cross reference.
         tt = TTPSMNet(wf.workingDir, wf)
+        tt.params = params
         wf.set_tt(tt)
 
         if ( True == args.multi_gpus ):
