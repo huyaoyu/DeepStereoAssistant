@@ -6,7 +6,7 @@
 *.code-workspace
 Debug*/
 debug*/
-Data*/
-data*/
+Data/
+data/
 WD*/
 
