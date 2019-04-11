@@ -1,0 +1,7 @@
+{
+    "jobName": "CSNJob",
+    "downSampleRatio": 2,
+    "torchOptimLearningRate": 1e-4,
+    "downSampleRatioTest": 4,
+    "preTrainedVGG": "/data/datasets/yaoyuh/Projects/DeepStereoAssistant/model/CSN/vgg16_bn-6c64b313.pth"
+}
