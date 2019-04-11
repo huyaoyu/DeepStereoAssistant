@@ -58,11 +58,14 @@ class TTPSMNet(TrainTestBase):
 
     # Overload parent's function.
     def init_model(self):
+        if ( self.maxDisp <= 0 ):
+            raise Exception("The maximum disparity must be positive.")
+
         # Neural net.
         if ( True == self.flagGrayscale ):
-            self.model = PyramidNet.PSMNet(1, 32, 64)
+            self.model = PyramidNet.PSMNet(1, 32, self.maxDisp)
         else:
-            self.model = PyramidNet.PSMNet(3, 32, 64)
+            self.model = PyramidNet.PSMNet(3, 32, self.maxDisp)
 
         # Check if we have to read the model from filesystem.
         if ( "" != self.readModelString ):
@@ -97,9 +100,6 @@ class TTPSMNet(TrainTestBase):
         imgR = imgR.cuda()
         disp = disp.cuda()
 
-        mask = disp < 1000000
-        mask.detach_()
-
         self.optimizer.zero_grad()
 
         out1, out2, out3 = self.model(imgL, imgR)
@@ -107,6 +107,13 @@ class TTPSMNet(TrainTestBase):
         out1 = torch.squeeze( out1, 1 )
         out2 = torch.squeeze( out2, 1 )
         out3 = torch.squeeze( out3, 1 )
+
+        dispStartingIndex = disp.shape[1] - out1.shape[1]
+
+        disp = disp[ :, dispStartingIndex:, :]
+
+        mask = disp < self.maxDisp
+        mask.detach_()
 
         loss = 0.5*F.smooth_l1_loss(out1[mask], disp[mask], reduction="mean") \
              + 0.7*F.smooth_l1_loss(out2[mask], disp[mask], reduction="mean") \
@@ -149,12 +156,17 @@ class TTPSMNet(TrainTestBase):
         imgL = imgL.cuda()
         imgR = imgR.cuda()
 
-        mask = disp < 192
-
         with torch.no_grad():
             output3 = self.model( imgL, imgR )
 
-        output = torch.squeeze( output3.data.cpu(), 1 )[:, 4:, :]
+        output = torch.squeeze( output3.data.cpu(), 1 )
+
+        dispStartingIndex = disp.shape[1] - output.shape[1]
+
+        disp = disp[ :, dispStartingIndex:, :]
+
+        mask = disp < self.maxDisp
+        mask.detach_()
 
         if ( len( disp[mask] ) == 0 ):
             loss = 0

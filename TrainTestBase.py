@@ -47,6 +47,8 @@ class TrainTestBase(object):
         self.dlCropTrain    = (0, 0) # (0, 0) for disable.
         self.dlCropTest     = (0, 0) # (0, 0) for disable.
 
+        self.maxDisp = 0 # Real disparity, not scaled.
+
         self.model     = None
         self.multiGPUs = False
 
@@ -82,6 +84,9 @@ class TrainTestBase(object):
         if ( self.frame is None ):
             raise Exception("self.frame must not be None.")
     
+    def set_max_disparity(self, md):
+        self.maxDisp = md
+
     def enable_multi_GPUs(self):
         self.check_frame()
 

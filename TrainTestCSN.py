@@ -74,6 +74,9 @@ class TTCSN(TrainTestBase):
 
     # Overload parent's function.
     def init_model(self):
+        if ( self.maxDisp <= 0 ):
+            raise Exception("The maximum disparity must be positive.")
+            
         # Neural net.
         if ( True == self.flagGrayscale ):
             raise Exception("Grayscale is not implemented for CSN yet.")
@@ -113,7 +116,7 @@ class TTCSN(TrainTestBase):
         # Forward.
         output = md( image0, image1 )
 
-        mask = disparity0 < 500
+        mask = disparity0 < self.maxDisp
         mask.detach_()
 
         output = output.squeeze( 1 )
@@ -177,7 +180,7 @@ class TTCSN(TrainTestBase):
 
         disparity0 = disparity0[ :, dispStartingIndex:, :]
 
-        mask = disparity0 < 500
+        mask = disparity0 < self.maxDisp
         mask.detach_()
 
         loss   = cri( outputTemp[mask], disparity0[mask] )
