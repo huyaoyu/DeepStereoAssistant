@@ -57,10 +57,15 @@ class TrainTestBase(object):
 
         self.optimizer = None
 
+        self.testResultSubfolder = "TestResults"
+
+        self.flagTest = False # Should be set to True when testing.
+
     def initialize(self):
         self.check_frame()
 
         # Over load these functions if nessesary.
+        self.init_base()
         self.init_workflow()
         self.init_torch()
         self.init_data()
@@ -144,6 +149,16 @@ class TrainTestBase(object):
             if ( self.trainIntervalAccPlot <= RECOMMENDED_MIN_INTERMITTENT_PLOT_INTERVAL ):
                 self.frame.logger.warning("When using the intermittent plotter. It is recommended that the plotting interval (%s) is higher than %d." % \
                     ( self.trainIntervalAccPlot, RECOMMENDED_MIN_INTERMITTENT_PLOT_INTERVAL ) )
+
+    def switch_on_test(self):
+        self.flagTest = True
+
+    def switch_off_test(self):
+        self.flagTest = False
+
+    def init_base(self):
+        # Make the subfolder for the test results.
+        self.frame.make_subfolder(self.testResultSubfolder)
 
     def init_workflow(self):
         raise Exception("init_workflow() virtual interface.")

@@ -108,6 +108,11 @@ if __name__ == "__main__":
         tt.enable_auto_save( args.auto_save_model )
         tt.set_training_acc_params( args.train_interval_acc_write, args.train_interval_acc_plot, args.use_intermittent_plotter )
 
+        if ( True == args.test ):
+            tt.switch_on_test()
+        else:
+            tt.switch_off_test()
+
         # Initialization.
         print_delimeter(title = "Initialize.")
         wf.initialize()

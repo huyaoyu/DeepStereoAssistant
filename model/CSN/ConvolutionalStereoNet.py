@@ -98,7 +98,7 @@ PRE_TRAIN_MAP = {
     }
 
 class ConvolutionalStereoNet(nn.Module):
-    def __init__(self, preTrainedVGGPath=None):
+    def __init__(self, flagReadModel=False, preTrainedVGGPath=None):
         super(ConvolutionalStereoNet, self).__init__()
 
         # Declare each layer.
@@ -177,7 +177,7 @@ class ConvolutionalStereoNet(nn.Module):
 
         self._initialize_weights()
 
-        if ( preTrainedVGGPath is not None ):
+        if ( False == flagReadModel and preTrainedVGGPath is not None ):
             self.load_pretrained_VGG(preTrainedVGGPath)
 
     def _initialize_weights(self):
@@ -239,6 +239,9 @@ class ConvolutionalStereoNet(nn.Module):
                 yield param
 
     def load_pretrained_VGG(self, preTrainModel):
+        if ( False == os.path.isfile(preTrainModel) ):
+            raise Exception("VGG model (%s) does not exist." % (preTrainModel))
+        
         preTrainDict = torch.load(preTrainModel)
 
         modelDict = self.state_dict()

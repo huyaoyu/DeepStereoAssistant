@@ -1,5 +1,7 @@
 from __future__ import print_function
 
+import os
+
 import torch
 from torch.autograd import Variable
 import torch.nn.functional as F
@@ -10,6 +12,12 @@ from workflow import WorkFlow, TorchFlow
 from TrainTestBase import TrainTestBase
 
 from model import PyramidNet
+
+import matplotlib.pyplot as plt
+if ( not ( "DISPLAY" in os.environ ) ):
+    plt.switch_backend('agg')
+    print("TrainTestCSN: Environment variable DISPLAY is not present in the system.")
+    print("TrainTestCSN: Switch the backend of matplotlib to agg.")
 
 class TTPSMNet(TrainTestBase):
     def __init__(self, workingDir, frame=None):
@@ -67,6 +75,7 @@ class TTPSMNet(TrainTestBase):
         else:
             self.model = PyramidNet.PSMNet(3, 32, self.maxDisp)
 
+        # import ipdb; ipdb.set_trace()
         # Check if we have to read the model from filesystem.
         if ( "" != self.readModelString ):
             modelFn = self.frame.workingDir + "/models/" + self.readModelString
@@ -145,6 +154,67 @@ class TTPSMNet(TrainTestBase):
 
         self.frame.logger.info("E%d, L%d: %s" % (epochCount, self.countTrain, self.frame.get_log_str()))
 
+    def draw_test_results(self, identifier, predD, trueD, imgL, imgR):
+        """
+        Draw test results.
+
+        predD: Dimension (B, H, W)
+        trueD: Dimension (B, H, W)
+        imgL: Dimension (B, C, H, W).
+        imgR: Dimension (B, C, H, W).
+        """
+
+        batchSize = predD.size()[0]
+        
+        for i in range(batchSize):
+            outDisp = predD[i, :, :].detach().cpu().numpy()
+            gdtDisp = trueD[i, :, :].detach().cpu().numpy()
+
+            outDisp = outDisp - outDisp.min()
+            gdtDisp = gdtDisp - outDisp.min()
+
+            outDisp = outDisp / outDisp.max()
+            gdtDisp = gdtDisp / gdtDisp.max()
+
+            # Create a matplotlib figure.
+            fig = plt.figure(figsize=(12.8, 9.6), dpi=300)
+
+            ax = plt.subplot(2, 2, 1)
+            plt.tight_layout()
+            ax.set_title("Ref")
+            ax.axis("off")
+            img0 = imgL[i, :, :, :].permute((1,2,0)).cpu().numpy()
+            img0 = img0 - img0.min()
+            img0 = img0 / img0.max()
+            plt.imshow( img0 )
+
+            ax = plt.subplot(2, 2, 3)
+            plt.tight_layout()
+            ax.set_title("Tst")
+            ax.axis("off")
+            img1 = imgR[i, :, :, :].permute((1,2,0)).cpu().numpy()
+            img1 = img1 - img1.min()
+            img1 = img1 / img1.max()
+            plt.imshow( img1 )
+
+            ax = plt.subplot(2, 2, 2)
+            plt.tight_layout()
+            ax.set_title("Ground truth")
+            ax.axis("off")
+            plt.imshow( gdtDisp )
+
+            ax = plt.subplot(2, 2, 4)
+            plt.tight_layout()
+            ax.set_title("Prediction")
+            ax.axis("off")
+            plt.imshow( outDisp )
+
+            figName = "%s_%02d" % (identifier, i)
+            figName = self.frame.compose_file_name(figName, "png", subFolder=self.testResultSubfolder)
+            plt.savefig(figName)
+
+            plt.close(fig)
+
     # Overload parent's function.
     def test(self, imgL, imgR, disp, epochCount):
         self.check_frame()
@@ -175,6 +245,15 @@ class TTPSMNet(TrainTestBase):
 
         self.countTest += 1
 
+        if ( True == self.flagTest ):
+            count = self.countTest
+        else:
+            count = self.countTrain
+
+        # Draw and save results.
+        identifier = "test_%d" % (count - 1)
+        self.draw_test_results( identifier, output, disp, imgL, imgR )
+
         # Test the existance of an AccumulatedValue object.
         if ( True == self.frame.have_accumulated_value("lossTest") ):
             self.frame.AV["lossTest"].push_back(loss.item(), self.countTest)
@@ -190,4 +269,5 @@ class TTPSMNet(TrainTestBase):
         self.check_frame()
 
         # Save the model.
-        self.frame.save_model( self.model, "PSMNet" )
+        if ( False == self.flagTest ):
+            self.frame.save_model( self.model, "PSMNet" )

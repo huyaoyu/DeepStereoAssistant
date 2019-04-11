@@ -26,8 +26,6 @@ class TTCSN(TrainTestBase):
         self.params = params
         self.criterion = torch.nn.SmoothL1Loss()
 
-        self.testResultSubfolder = "TestResults"
-
     # def initialize(self):
     #     self.check_frame()
     #     raise Exception("Not implemented.")
@@ -38,9 +36,6 @@ class TTCSN(TrainTestBase):
         self.frame.add_accumulated_value("lossTest", 10)
 
         self.frame.AV["loss"].avgWidth = 10
-
-        # Make the subfolder for the test results.
-        self.frame.make_subfolder(self.testResultSubfolder)
         
         # ======= AVP. ======
         # === Create a AccumulatedValuePlotter object for ploting. ===
@@ -76,15 +71,18 @@ class TTCSN(TrainTestBase):
     def init_model(self):
         if ( self.maxDisp <= 0 ):
             raise Exception("The maximum disparity must be positive.")
-            
+
+        flagReadModel = ( "" != self.readModelString )
+
         # Neural net.
         if ( True == self.flagGrayscale ):
             raise Exception("Grayscale is not implemented for CSN yet.")
         else:
-            self.model = ConvolutionalStereoNet( self.params["preTrainedVGG"] )
+            self.model = ConvolutionalStereoNet( flagReadModel=flagReadModel, \
+                preTrainedVGGPath=self.params["preTrainedVGG"] )
 
         # Check if we have to read the model from filesystem.
-        if ( "" != self.readModelString ):
+        if ( flagReadModel ):
             modelFn = self.frame.workingDir + "/models/" + self.readModelString
 
             if ( False == os.path.isfile( modelFn ) ):
@@ -207,13 +205,31 @@ class TTCSN(TrainTestBase):
             # Create a matplotlib figure.
             fig = plt.figure(figsize=(12.8, 9.6), dpi=300)
 
-            ax = plt.subplot(2, 1, 1)
+            ax = plt.subplot(2, 2, 1)
+            plt.tight_layout()
+            ax.set_title("Ref")
+            ax.axis("off")
+            img0 = image0[i, :, :, :].permute((1,2,0)).cpu().numpy()
+            img0 = img0 - img0.min()
+            img0 = img0 / img0.max()
+            plt.imshow( img0 )
+
+            ax = plt.subplot(2, 2, 3)
+            plt.tight_layout()
+            ax.set_title("Tst")
+            ax.axis("off")
+            img1 = image1[i, :, :, :].permute((1,2,0)).cpu().numpy()
+            img1 = img1 - img1.min()
+            img1 = img1 / img1.max()
+            plt.imshow( img1 )
+
+            ax = plt.subplot(2, 2, 2)
             plt.tight_layout()
             ax.set_title("Ground truth")
             ax.axis("off")
             plt.imshow( gdtDisp )
 
-            ax = plt.subplot(2, 1, 2)
+            ax = plt.subplot(2, 2, 4)
             plt.tight_layout()
             ax.set_title("Prediction")
             ax.axis("off")
@@ -240,10 +256,16 @@ class TTCSN(TrainTestBase):
 
         # mask = disp < 192
 
-        identifier = "test_%d" % (self.countTrain - 1)
-        loss = self.single_test( identifier, imgL, imgR, disp, self.model, self.criterion )
-
         self.countTest += 1
+
+        if ( True == self.flagTest ):
+            count = self.countTest
+        else:
+            count = self.countTrain
+
+        # Draw and save results.
+        identifier = "test_%d" % (count - 1)
+        loss = self.single_test( identifier, imgL, imgR, disp, self.model, self.criterion )
 
         # Test the existance of an AccumulatedValue object.
         if ( True == self.frame.have_accumulated_value("lossTest") ):
@@ -260,4 +282,5 @@ class TTCSN(TrainTestBase):
         self.check_frame()
         
         # Save the model.
-        self.frame.save_model( self.model, "CSN" )
+        if ( False == self.flagTest ):
+            self.frame.save_model( self.model, "CSN" )
