@@ -1,5 +1,7 @@
 from __future__ import print_function
 
+import numpy as np
+
 import torch
 from torch.autograd import Variable
 import torch.nn.functional as F
@@ -196,11 +198,16 @@ class TTCSN(TrainTestBase):
             outDisp = output[i, 0, :, :].detach().cpu().numpy()
             gdtDisp = disparity0[i, :, :].detach().cpu().numpy()
 
-            outDisp = outDisp - outDisp.min()
-            gdtDisp = gdtDisp - outDisp.min()
+            gdtMin = gdtDisp.min()
+            gdtMax = gdtDisp.max()
 
-            outDisp = outDisp / outDisp.max()
-            gdtDisp = gdtDisp / gdtDisp.max()
+            # outDisp = outDisp - outDisp.min()
+            outDisp = outDisp - gdtMin
+            gdtDisp = gdtDisp - gdtMin
+
+            # outDisp = outDisp / outDisp.max()
+            outDisp = np.clip( outDisp / gdtMax, 0.0, 1.0 )
+            gdtDisp = gdtDisp / gdtMax
 
             # Create a matplotlib figure.
             fig = plt.figure(figsize=(12.8, 9.6), dpi=300)

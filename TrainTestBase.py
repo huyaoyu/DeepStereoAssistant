@@ -15,9 +15,17 @@ from workflow import WorkFlow, TorchFlow
 
 from DataLoader.SceneFlow import Loader as DA
 from DataLoader import PreProcess
-from DataLoader.SceneFlow.utils import list_files_sceneflow_FlyingThings
+from DataLoader.SceneFlow.utils import list_files_sceneflow_FlyingThings, read_string_list
 
 RECOMMENDED_MIN_INTERMITTENT_PLOT_INTERVAL = 100
+
+DATASET_LIST_TRAINING_IMG_L = "InputImageTrainL.txt"
+DATASET_LIST_TRAINING_IMG_R = "InputImageTrainR.txt"
+DATASET_LIST_TRAINING_DSP_L = "InputDisparityTrain.txt"
+
+DATASET_LIST_TESTING_IMG_L = "InputImageTestL.txt"
+DATASET_LIST_TESTING_IMG_R = "InputImageTestR.txt"
+DATASET_LIST_TESTING_DSP_L = "InputDisparityTest.txt"
 
 class TrainTestBase(object):
     def __init__(self, workingDir, frame=None):
@@ -37,6 +45,7 @@ class TrainTestBase(object):
         self.imgTrainLoader = None
         self.imgTestLoader  = None
         self.datasetRootDir = "./"
+        self.dataFileList   = False # Once set to be true, the files contain the list of input dataset will be used.
         self.dataEntries    = 0 # 0 for using all the data.
         self.datasetTrain   = None # Should be an object of torch.utils.data.Dataset.
         self.datasetTest    = None # Should be an object of torch.utils.data.Dataset.
@@ -99,7 +108,7 @@ class TrainTestBase(object):
 
         self.frame.logger.info("Enable multi-GPUs.")
 
-    def set_dataset_root_dir(self, d, nEntries=0):
+    def set_dataset_root_dir(self, d, nEntries=0, flagFileList=False):
         self.check_frame()
 
         if ( False == os.path.isdir(d) ):
@@ -112,7 +121,14 @@ class TrainTestBase(object):
         if ( 0 != nEntries ):
             self.frame.logger.warning("Only %d entries of the training dataset will be used." % ( nEntries ))
 
-    def set_data_loader_params(self, batchSize=2, shuffle=True, numWorkers=2, dropLast=False, cropTrain=(0, 0), cropTest=(0, 0)):
+        self.dataFileList = flagFileList
+
+        if ( True == self.dataFileList ):
+            self.frame.logger.info("Data loader will use the pre-defined files to load the input data.")
+
+    def set_data_loader_params(self, batchSize=2, shuffle=True, numWorkers=2, dropLast=False, \
+        cropTrain=(0, 0), cropTest=(0, 0)):
+        
         self.check_frame()
 
         self.dlBatchSize  = batchSize
@@ -178,8 +194,16 @@ class TrainTestBase(object):
         # imgTrainL, imgTrainR, dispTrain, imgTestL, imgTestR, dispTest \
         #     = list_files_sample("/media/yaoyu/DiskE/SceneFlow/Sampler/FlyingThings3D")
 
-        imgTrainL, imgTrainR, dispTrain, imgTestL, imgTestR, dispTest \
-            = list_files_sceneflow_FlyingThings( self.datasetRootDir )
+        if ( True == self.dataFileList ):
+            imgTrainL = read_string_list( self.datasetRootDir + "/" + DATASET_LIST_TRAINING_IMG_L )
+            imgTrainR = read_string_list( self.datasetRootDir + "/" + DATASET_LIST_TRAINING_IMG_R )
+            dispTrain = read_string_list( self.datasetRootDir + "/" + DATASET_LIST_TRAINING_DSP_L )
+            imgTestL  = read_string_list( self.datasetRootDir + "/" + DATASET_LIST_TESTING_IMG_L )
+            imgTestR  = read_string_list( self.datasetRootDir + "/" + DATASET_LIST_TESTING_IMG_R )
+            dispTest  = read_string_list( self.datasetRootDir + "/" + DATASET_LIST_TESTING_DSP_L )
+        else:
+            imgTrainL, imgTrainR, dispTrain, imgTestL, imgTestR, dispTest \
+                = list_files_sceneflow_FlyingThings( self.datasetRootDir )
 
         if ( 0 != self.dataEntries ):
             imgTrainL = imgTrainL[0:self.dataEntries]
