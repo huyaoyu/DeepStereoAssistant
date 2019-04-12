@@ -76,7 +76,7 @@ def list_files_sceneflow_Monkaa(rootPath, withoutRootPath=False):
     if ( False == os.path.isdir(rootPath + "/frames_cleanpass") ):
         raise Exception("%s does not exist." % ( rootPath + "/frames_cleanpass" ))
 
-    import ipdb; ipdb.set_trace()
+    # import ipdb; ipdb.set_trace()
 
     # Search the "frames_cleanpass" directory recursively.
     allImgL = sorted( glob.glob( rootPath + "/frames_cleanpass/**/left/*.png", recursive=True ) )
