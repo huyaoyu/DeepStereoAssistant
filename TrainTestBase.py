@@ -65,6 +65,7 @@ class TrainTestBase(object):
         self.autoSaveModelLoops = 0 # The number of loops to perform an auto-saving of the model. 0 for disable.
 
         self.optimizer = None
+        self.learningRate = 0.001
 
         self.testResultSubfolder = "TestResults"
 
@@ -98,6 +99,14 @@ class TrainTestBase(object):
         if ( self.frame is None ):
             raise Exception("self.frame must not be None.")
     
+    def set_learning_rate(self, lr):
+        self.check_frame()
+
+        self.learningRate = lr
+
+        if ( self.learningRate >= 1.0 ):
+            self.frame.logger.warning("Large learning rate (%f) is set." % (self.learningRate))
+
     def set_max_disparity(self, md):
         self.maxDisp = md
 

@@ -95,7 +95,7 @@ class TTPSMNet(TrainTestBase):
     # Overload parent's function.
     def init_optimizer(self):
         # self.optimizer = optim.Adam( self.model.parameters(), lr=0.001, betas=(0.9, 0.999) )
-        self.optimizer = optim.Adam( self.model.parameters(), lr=0.001 )
+        self.optimizer = optim.Adam( self.model.parameters(), lr=self.learningRate )
 
     # Overload parent's function.
     def train(self, imgL, imgR, disp, epochCount):

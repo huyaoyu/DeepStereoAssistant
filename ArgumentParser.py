@@ -22,6 +22,9 @@ parser.add_argument("--suffix", type=str, default="", \
 parser.add_argument("--multi-gpus", action="store_true", default=False, \
     help="Use multiple GPUs.")
 
+parser.add_argument("--lr", type=float, default=0.0001, \
+    help="Learning rate.")
+
 parser.add_argument("--max-disparity", type=int, default=512, \
     help="The maximum disparity without any scale factor.")
 

@@ -101,7 +101,7 @@ class TTCSN(TrainTestBase):
     # Overload parent's function.
     def init_optimizer(self):
         # self.optimizer = optim.Adam( self.model.parameters(), lr=0.001, betas=(0.9, 0.999) )
-        self.optimizer = optim.Adam( self.model.parameters(), lr=self.params["torchOptimLearningRate"] )
+        self.optimizer = optim.Adam( self.model.parameters(), lr=self.learningRate )
 
     def single_train(self, image0, image1, disparity0, md, cri, opt):
         """
