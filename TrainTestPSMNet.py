@@ -149,7 +149,7 @@ class TTPSMNet(TrainTestBase):
         # Auto-save.
         if ( 0 != self.autoSaveModelLoops ):
             if ( self.countTrain % self.autoSaveModelLoops == 0 ):
-                modelName = "AutoSave_%06d" % ( self.countTrain )
+                modelName = "AutoSave_%08d" % ( self.countTrain )
                 self.frame.logger.info("Auto-save the model.")
                 self.frame.save_model( self.model, modelName )
 
