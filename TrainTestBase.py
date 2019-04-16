@@ -208,8 +208,8 @@ class TrainTestBase(object):
 
         self.frame.logger.info("Configure Torch.")
 
-        torch.manual_seed(1)
-        torch.cuda.manual_seed(1)
+        # torch.manual_seed(1)
+        # torch.cuda.manual_seed(1)
 
     def init_data(self):
         # Get all the sample images.
