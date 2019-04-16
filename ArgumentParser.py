@@ -22,6 +22,9 @@ parser.add_argument("--suffix", type=str, default="", \
 parser.add_argument("--multi-gpus", action="store_true", default=False, \
     help="Use multiple GPUs.")
 
+parser.add_argument("--lr", type=float, default=0.0001, \
+    help="Learning rate.")
+
 parser.add_argument("--max-disparity", type=int, default=512, \
     help="The maximum disparity without any scale factor.")
 
@@ -49,6 +52,9 @@ parser.add_argument("--dl-drop-last", action="store_true", default=False, \
 parser.add_argument("--data-root-dir", type=str, default="./Data", \
     help="The root directory of the dataset.")
 
+parser.add_argument("--data-file-list", action="store_true", default=False, \
+    help="Use the pre-defined image and disparity list files.")
+
 parser.add_argument("--data-entries", type=int, default=0, \
     help="Only use the first several entries of the dataset. This is for debug use. Set 0 for using all the data.")
 
@@ -60,6 +66,9 @@ parser.add_argument("--test", action="store_true", default=False, \
 
 parser.add_argument("--test-loops", type=int, default=0, \
     help="The number of training loops between a test. Set 0 for not testing.")
+
+parser.add_argument("--infer", action="store_true", default=False, \
+    help="Enable the infer mode.")
 
 parser.add_argument("--train-interval-acc-write", type=int, default=10, \
     help="Write the accumulated data to filesystem by the number of loops specified.")

@@ -65,6 +65,11 @@ class MyWF(TorchFlow.TorchFlow):
 
         return self.tt.test(imgL, imgR, disp, epochCount)
 
+    def infer(self, imgL, imgR):
+        self.check_tt()
+
+        self.tt.infer(imgL, imgR)
+
     # Overload the function finalize().
     def finalize(self):
         super(MyWF, self).finalize()
@@ -119,11 +124,12 @@ if __name__ == "__main__":
         tt.flagGrayscale = args.grayscale
 
         # Set parameters.
+        tt.set_learning_rate(args.lr)
         tt.set_max_disparity(args.max_disparity)
         tt.set_data_loader_params( \
             args.dl_batch_size, not args.dl_disable_shuffle, args.dl_num_workers, args.dl_drop_last, \
             cropTrain=cropTrain, cropTest=cropTest )
-        tt.set_dataset_root_dir( args.data_root_dir, args.data_entries )
+        tt.set_dataset_root_dir( args.data_root_dir, args.data_entries, args.data_file_list )
         tt.set_read_model( args.read_model )
         tt.enable_auto_save( args.auto_save_model )
         tt.set_training_acc_params( args.train_interval_acc_write, args.train_interval_acc_plot, args.use_intermittent_plotter )
@@ -133,53 +139,65 @@ if __name__ == "__main__":
         else:
             tt.switch_off_test()
 
+        if ( True == args.infer ):
+            tt.switch_on_infer()
+        else:
+            tt.switch_off_infer()
+
         # Initialization.
         print_delimeter(title = "Initialize.")
         wf.initialize()
 
-        # Get the number of test data.
-        nTests = len( tt.imgTestLoader )
-        wf.logger.info("The size of the test dataset is %s." % ( nTests ))
-        currentTestIdx = 0
+        if ( False == args.infer ):
+             # Get the number of test data.
+            nTests = len( tt.imgTestLoader )
+            wf.logger.info("The size of the test dataset is %s." % ( nTests ))
 
-        if ( False == args.test ):
-            # Create the test data iterator.
-            iterTestData = iter( tt.imgTestLoader )
+            if ( False == args.test ):
+                # Create the test data iterator.
+                iterTestData = iter( tt.imgTestLoader )
 
-            # Training loop.
-            wf.logger.info("Begin training.")
-            print_delimeter(title = "Training loops.")
+                # Training loop.
+                wf.logger.info("Begin training.")
+                print_delimeter(title = "Training loops.")
 
-            for i in range(args.train_epochs):
-                for batchIdx, ( imgCropL, imgCropR, dispCrop ) in enumerate( tt.imgTrainLoader ):
-                    # wf.logger.info( "imgCropL.shape = {}".format( imgCropL.shape ) )
-                    # import ipdb; ipdb.set_trace()
-                    wf.train( imgCropL, imgCropR, dispCrop, i )
+                for i in range(args.train_epochs):
+                    for batchIdx, ( imgCropL, imgCropR, dispCrop ) in enumerate( tt.imgTrainLoader ):
+                        # wf.logger.info( "imgCropL.shape = {}".format( imgCropL.shape ) )
+                        # import ipdb; ipdb.set_trace()
+                        wf.train( imgCropL, imgCropR, dispCrop, i )
 
-                    # Check if we need a test.
-                    if ( 0 != args.test_loops ):
-                        if ( tt.countTrain % args.test_loops == 0 ):
-                            # Get test data.
-                            try:
-                                testImgL, testImgR, testDisp = next( iterTestData )
-                            except StopIteration:
-                                iterTestData = iter(tt.imgTestLoader)
-                                testImgL, testImgR, testDisp = next( iterTestData )
+                        # Check if we need a test.
+                        if ( 0 != args.test_loops ):
+                            if ( tt.countTrain % args.test_loops == 0 ):
+                                # Get test data.
+                                try:
+                                    testImgL, testImgR, testDisp = next( iterTestData )
+                                except StopIteration:
+                                    iterTestData = iter(tt.imgTestLoader)
+                                    testImgL, testImgR, testDisp = next( iterTestData )
 
-                            # Perform test.
-                            wf.test( testImgL, testImgR, testDisp, i )
+                                # Perform test.
+                                wf.test( testImgL, testImgR, testDisp, i )
+            else:
+                wf.logger.info("Begin testing.")
+                print_delimeter(title="Testing loops.")
+
+                totalLoss = 0
+
+                for batchIdx, ( imgL, imgR, disp ) in enumerate( tt.imgTestLoader ):
+                    loss = wf.test( imgL, imgR, disp, 0 )
+                    wf.logger.info("Test %d, loss = %f." % ( batchIdx, loss ))
+                    totalLoss += loss
+
+                wf.logger.info("Average loss = %f." % ( totalLoss / nTests ))
         else:
-            wf.logger.info("Begin testing.")
-            print_delimeter(title="Testing loops.")
+            wf.logger.info("Begin inferring.")
+            print_delimeter(title="Inferring loops.")
 
-            totalLoss = 0
-
-            for batchIdx, ( imgL, imgR, disp ) in enumerate( tt.imgTestLoader ):
-                loss = wf.test( imgL, imgR, disp, 0 )
-                wf.logger.info("Test %d, loss = %f." % ( batchIdx, loss ))
-                totalLoss += loss
-
-            wf.logger.info("Average loss = %f." % ( totalLoss / nTests ))
+            for batchIdx, ( imgL, imgR ) in enumerate( tt.imgInferLoader ):
+                wf.infer( imgL, imgR )
+                wf.logger.info("Infer %d." % ( batchIdx ))
 
         # wf.test()
         wf.finalize()

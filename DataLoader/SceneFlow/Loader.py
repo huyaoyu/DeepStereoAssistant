@@ -114,6 +114,45 @@ class myImageFolder(data.Dataset):
     def __len__(self):
         return len(self.left)
 
+class inferImageFolder(data.Dataset):
+    def __init__(self, left, right, \
+        loader=default_loader, preprocessor=None, \
+        cropSize=(0,0)):
+ 
+        self.left = left
+        self.right = right
+        self.loader = loader
+
+        # Modified.
+        self.preprocessor  = preprocessor
+        self.cropSize = cropSize
+
+    def __getitem__(self, index):
+        left  = self.left[index]
+        right = self.right[index]
+
+        left_img = self.loader(left)
+        right_img = self.loader(right)
+
+        w, h = left_img.size
+
+        if ( self.cropSize[0] <= 0 or self.cropSize[1] <= 0 ):
+            ch, cw = h, w
+        else:
+            ch, cw = self.cropSize[0], self.cropSize[1]
+
+        left_img  = left_img.crop( (w-cw, h-ch, w, h))
+        right_img = right_img.crop((w-cw, h-ch, w, h))
+
+        if ( self.preprocessor is not None ):
+            left_img  = self.preprocessor(left_img)
+            right_img = self.preprocessor(right_img)
+
+        return left_img, right_img
+
+    def __len__(self):
+        return len(self.left)
+
 if __name__ == "__main__":    
     img = default_loader("/media/yaoyu/DiskE/SceneFlow/Sampler/FlyingThings3D_Manually/frames_cleanpass/TRAIN/A/0000/left/0006.png")
     import ipdb; ipdb.set_trace()
