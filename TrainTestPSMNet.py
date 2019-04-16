@@ -366,6 +366,44 @@ class TTPSMNU(TTPSMNet):
         super(TTPSMNU, self).__init__( workingDir, frame )
 
     # Overload parent's function.
+    def init_workflow(self):
+        # === Create the AccumulatedObjects. ===
+        self.frame.add_accumulated_value("lossTest", 10)
+        self.frame.add_accumulated_value("sigma2", 10)
+
+        self.frame.AV["loss"].avgWidth = 10
+        
+        # ======= AVP. ======
+        # === Create a AccumulatedValuePlotter object for ploting. ===
+        if ( True == self.flagUseIntPlotter ):
+            self.frame.AVP.append(\
+                WorkFlow.PLTIntermittentPlotter(\
+                    self.frame.workingDir + "/IntPlot", 
+                    "loss", self.frame.AV, ["loss"], [True], semiLog=True) )
+
+            self.frame.AVP.append(\
+                WorkFlow.PLTIntermittentPlotter(\
+                    self.frame.workingDir + "/IntPlot", 
+                    "lossTest", self.frame.AV, ["lossTest"], [True], semiLog=True) )
+
+            self.frame.AVP.append(\
+                WorkFlow.PLTIntermittentPlotter(\
+                    self.frame.workingDir + "/IntPlot", 
+                    "sigma2", self.frame.AV, ["sigma2"], [True], semiLog=True) )
+        else:
+            self.frame.AVP.append(\
+                WorkFlow.VisdomLinePlotter(\
+                    "loss", self.frame.AV, ["loss"], [True], semiLog=True) )
+
+            self.frame.AVP.append(\
+                WorkFlow.VisdomLinePlotter(\
+                    "lossTest", self.frame.AV, ["lossTest"], [True], semiLog=True) )
+
+            self.frame.AVP.append(\
+                WorkFlow.VisdomLinePlotter(\
+                    "sigma2", self.frame.AV, ["sigma2"], [True], semiLog=True) )
+
+    # Overload parent's function.
     def init_model(self):
         if ( self.maxDisp <= 0 ):
             raise Exception("The maximum disparity must be positive.")
@@ -439,6 +477,7 @@ class TTPSMNU(TTPSMNet):
         self.optimizer.step()
 
         self.frame.AV["loss"].push_back( loss.item() )
+        self.frame.AV["sigma2"].push_back( torch.exp( avgLogSigSqu ).item() )
 
         self.countTrain += 1
 
