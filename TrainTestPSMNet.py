@@ -360,3 +360,177 @@ class TTPSMNet(TrainTestBase):
         # Save the model.
         if ( False == self.flagTest and False == self.flagInfer ):
             self.frame.save_model( self.model, "PSMNet" )
+
+class TTPSMNU(TTPSMNet):
+    def __init__(self, workingDir, frame=None):
+        super(TTPSMNU, self).__init__( workingDir, frame )
+
+    # Overload parent's function.
+    def init_model(self):
+        if ( self.maxDisp <= 0 ):
+            raise Exception("The maximum disparity must be positive.")
+
+        # Neural net.
+        if ( True == self.flagGrayscale ):
+            self.model = PyramidNet.PSMNetWithUncertainty(1, 32, self.maxDisp)
+        else:
+            self.model = PyramidNet.PSMNetWithUncertainty(3, 32, self.maxDisp)
+
+        # import ipdb; ipdb.set_trace()
+        # Check if we have to read the model from filesystem.
+        if ( "" != self.readModelString ):
+            modelFn = self.frame.workingDir + "/models/" + self.readModelString
+
+            if ( False == os.path.isfile( modelFn ) ):
+                raise Exception("Model file (%s) does not exist." % ( modelFn ))
+
+            self.model = self.frame.load_model( self.model, modelFn )
+
+        self.frame.logger.info("PSMNet has %d model parameters." % \
+            ( sum( [ p.data.nelement() for p in self.model.parameters() ] ) ) )
+
+    # Overload parent's function.
+    def train(self, imgL, imgR, disp, epochCount):
+        self.check_frame()
+
+        if ( True == self.flagInfer ):
+            raise Exception("Could not train with infer mode.")
+
+        self.model.train()
+        imgL = Variable( torch.FloatTensor(imgL) )
+        imgR = Variable( torch.FloatTensor(imgR) )
+        disp = Variable( torch.FloatTensor(disp) )
+
+        imgL = imgL.cuda()
+        imgR = imgR.cuda()
+        disp = disp.cuda()
+
+        self.optimizer.zero_grad()
+
+        out1, out2, out3, logSigSqu = self.model(imgL, imgR)
+
+        out1 = torch.squeeze( out1, 1 )
+        out2 = torch.squeeze( out2, 1 )
+        out3 = torch.squeeze( out3, 1 )
+
+        dispStartingIndex = disp.shape[1] - out1.shape[1]
+
+        disp = disp[ :, dispStartingIndex:, :]
+
+        mask = disp < self.maxDisp
+        mask.detach_()
+
+        # =================== New loss function. =============================
+        expLogSigSqu = torch.exp(-logSigSqu)
+        mExpLogSigSqu = expLogSigSqu[mask]
+
+        loss = 0.5*F.smooth_l1_loss(mExpLogSigSqu * out1[mask], mExpLogSigSqu * disp[mask], reduction="mean") \
+             + 0.7*F.smooth_l1_loss(mExpLogSigSqu * out2[mask], mExpLogSigSqu * disp[mask], reduction="mean") \
+             +     F.smooth_l1_loss(mExpLogSigSqu * out3[mask], mExpLogSigSqu * disp[mask], reduction="mean")
+
+        avgLogSigSqu = torch.mean( logSigSqu )
+        self.frame.logger.info("avgLogSigSqu = %f." % (avgLogSigSqu.item()))
+        loss = ( loss + avgLogSigSqu ) / 2.0
+
+        # loss = F.smooth_l1_loss(out1[mask], disp[mask], reduction="mean")
+
+        loss.backward()
+
+        self.optimizer.step()
+
+        self.frame.AV["loss"].push_back( loss.item() )
+
+        self.countTrain += 1
+
+        if ( self.countTrain % self.trainIntervalAccWrite == 0 ):
+            self.frame.write_accumulated_values()
+
+        # Plot accumulated values.
+        if ( self.countTrain % self.trainIntervalAccPlot == 0 ):
+            self.frame.plot_accumulated_values()
+
+        # Auto-save.
+        if ( 0 != self.autoSaveModelLoops ):
+            if ( self.countTrain % self.autoSaveModelLoops == 0 ):
+                modelName = "AutoSave_%08d" % ( self.countTrain )
+                self.frame.logger.info("Auto-save the model.")
+                self.frame.save_model( self.model, modelName )
+
+        self.frame.logger.info("E%d, L%d: %s" % (epochCount, self.countTrain, self.frame.get_log_str()))
+
+    # Overload parent's function.
+    def test(self, imgL, imgR, disp, epochCount):
+        self.check_frame()
+
+        if ( True == self.flagInfer ):
+            raise Exception("Could not test in the infer mode.")
+
+        self.model.eval()
+        imgL = Variable( torch.FloatTensor( imgL ) )
+        imgR = Variable( torch.FloatTensor( imgR ) )
+
+        imgL = imgL.cuda()
+        imgR = imgR.cuda()
+
+        with torch.no_grad():
+            output3, logSigSqu = self.model( imgL, imgR )
+
+        output = torch.squeeze( output3.data.cpu(), 1 )
+
+        dispStartingIndex = disp.shape[1] - output.shape[1]
+
+        disp = disp[ :, dispStartingIndex:, :]
+
+        mask = disp < self.maxDisp
+        mask.detach_()
+
+        if ( len( disp[mask] ) == 0 ):
+            loss = 0
+        else:
+            expLogSigSqu = torch.exp(-logSigSqu)
+            mExpLogSigSqu = expLogSigSqu[mask]
+
+            loss = torch.mean( torch.abs( mExpLogSigSqu * output[mask] - mExpLogSigSqu * disp[mask] ) )
+            loss = ( loss + torch.mean( logSigSqu ) ) / 2.0
+
+        self.countTest += 1
+
+        if ( True == self.flagTest ):
+            count = self.countTest
+        else:
+            count = self.countTrain
+
+        # Draw and save results.
+        identifier = "test_%d" % (count - 1)
+        self.draw_test_results( identifier, output, disp, imgL, imgR )
+
+        # Test the existance of an AccumulatedValue object.
+        if ( True == self.frame.have_accumulated_value("lossTest") ):
+            self.frame.AV["lossTest"].push_back(loss.item(), self.countTest)
+        else:
+            self.frame.logger.info("Could not find \"lossTest\"")
+
+        self.frame.plot_accumulated_values()
+
+        return loss.item()
+
+    def infer(self, imgL, imgR):
+        self.check_frame()
+
+        self.model.eval()
+        imgL = Variable( torch.FloatTensor( imgL ) )
+        imgR = Variable( torch.FloatTensor( imgR ) )
+
+        imgL = imgL.cuda()
+        imgR = imgR.cuda()
+
+        with torch.no_grad():
+            output3, logSigSqu = self.model( imgL, imgR )
+
+        output = torch.squeeze( output3.data.cpu(), 1 )
+
+        self.countTest += 1
+
+        # Draw and save results.
+        identifier = "infer_%d" % (self.countTest - 1)
+        self.draw_infer_results( identifier, output, imgL, imgR )
