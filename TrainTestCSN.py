@@ -134,6 +134,9 @@ class TTCSN(TrainTestBase):
     def train(self, imgL, imgR, disp, epochCount):
         self.check_frame()
 
+        if ( True == self.flagInfer ):
+            raise Exception("Could not train in the infer mode.")
+
         self.model.train()
         imgL = Variable( torch.FloatTensor(imgL) )
         imgR = Variable( torch.FloatTensor(imgR) )
@@ -254,6 +257,9 @@ class TTCSN(TrainTestBase):
     def test(self, imgL, imgR, disp, epochCount):
         self.check_frame()
 
+        if ( True == self.flagInfer ):
+            raise Exception("Could not test in the infer mode.")
+
         self.model.eval()
         imgL = Variable( torch.FloatTensor( imgL ) )
         imgR = Variable( torch.FloatTensor( imgR ) )
@@ -284,10 +290,88 @@ class TTCSN(TrainTestBase):
 
         return loss.item()
 
+    def single_infer(self, identifier, image0, image1, md):
+        """
+        identifier: A string identifies this test.
+        md:  The pytorch module.
+        """
+        
+        # Forward.
+        with torch.no_grad():
+            output = md( image0, image1 )
+            # output = output[:, :, 4:, :]
+        
+        # outputTemp = torch.squeeze( output.data.cpu(), 1 )
+
+        # Save the test result.
+        batchSize = output.size()[0]
+        
+        for i in range(batchSize):
+            outDisp = output[i, 0, :, :].detach().cpu().numpy()
+
+            outMin = outDisp.min()
+            outMax = outDisp.max()
+
+            outDisp = outDisp - outMin
+
+            outDisp = np.clip( outDisp / outMax, 0.0, 1.0 )
+
+            # Create a matplotlib figure.
+            fig = plt.figure(figsize=(12.8, 9.6), dpi=300)
+
+            ax = plt.subplot(2, 2, 1)
+            plt.tight_layout()
+            ax.set_title("Ref")
+            ax.axis("off")
+            img0 = image0[i, :, :, :].permute((1,2,0)).cpu().numpy()
+            img0 = img0 - img0.min()
+            img0 = img0 / img0.max()
+            plt.imshow( img0 )
+
+            ax = plt.subplot(2, 2, 3)
+            plt.tight_layout()
+            ax.set_title("Tst")
+            ax.axis("off")
+            img1 = image1[i, :, :, :].permute((1,2,0)).cpu().numpy()
+            img1 = img1 - img1.min()
+            img1 = img1 / img1.max()
+            plt.imshow( img1 )
+
+            ax = plt.subplot(2, 2, 4)
+            plt.tight_layout()
+            ax.set_title("Prediction")
+            ax.axis("off")
+            plt.imshow( outDisp )
+
+            figName = "%s_%02d" % (identifier, i)
+            figName = self.frame.compose_file_name(figName, "png", subFolder=self.testResultSubfolder)
+            plt.savefig(figName)
+
+            plt.close(fig)
+
+    def infer(self, imgL, imgR):
+        self.check_frame()
+
+        if ( False == self.flagInfer ):
+            raise Exception("Not in the infer mode.")
+
+        self.model.eval()
+        imgL = Variable( torch.FloatTensor( imgL ) )
+        imgR = Variable( torch.FloatTensor( imgR ) )
+
+        imgL = imgL.cuda()
+        imgR = imgR.cuda()
+
+        self.countTest += 1
+
+        # Draw and save results.
+        identifier = "infer_%d" % (self.countTest - 1)
+        self.single_infer( identifier, imgL, imgR, self.model )
+
     # Overload parent's function.
     def finalize(self):
         self.check_frame()
         
         # Save the model.
-        if ( False == self.flagTest ):
+        if ( False == self.flagTest and False == self.flagInfer ):
             self.frame.save_model( self.model, "CSN" )

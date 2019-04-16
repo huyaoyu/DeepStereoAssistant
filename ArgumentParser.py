@@ -67,6 +67,9 @@ parser.add_argument("--test", action="store_true", default=False, \
 parser.add_argument("--test-loops", type=int, default=0, \
     help="The number of training loops between a test. Set 0 for not testing.")
 
+parser.add_argument("--infer", action="store_true", default=False, \
+    help="Enable the infer mode.")
+
 parser.add_argument("--train-interval-acc-write", type=int, default=10, \
     help="Write the accumulated data to filesystem by the number of loops specified.")
 
