@@ -429,7 +429,7 @@ class TTPSMNU(TTPSMNet):
              +     F.smooth_l1_loss(mExpLogSigSqu * out3[mask], mExpLogSigSqu * disp[mask], reduction="mean")
 
         avgLogSigSqu = torch.mean( logSigSqu )
-        self.frame.logger.info("avgLogSigSqu = %f." % (avgLogSigSqu.item()))
+        # self.frame.logger.info("avgLogSigSqu = %f." % (avgLogSigSqu.item()))
         loss = ( loss + avgLogSigSqu ) / 2.0
 
         # loss = F.smooth_l1_loss(out1[mask], disp[mask], reduction="mean")
@@ -476,6 +476,8 @@ class TTPSMNU(TTPSMNet):
             output3, logSigSqu = self.model( imgL, imgR )
 
         output = torch.squeeze( output3.data.cpu(), 1 )
+        logSigSqu.clamp_(-10, 10)
+        logSigSqu = logSigSqu.data.cpu()
 
         dispStartingIndex = disp.shape[1] - output.shape[1]
 
@@ -487,6 +489,7 @@ class TTPSMNU(TTPSMNet):
         if ( len( disp[mask] ) == 0 ):
             loss = 0
         else:
+            # import ipdb; ipdb.set_trace()
             expLogSigSqu = torch.exp(-logSigSqu)
             mExpLogSigSqu = expLogSigSqu[mask]
 
