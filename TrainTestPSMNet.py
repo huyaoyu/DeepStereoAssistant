@@ -497,6 +497,85 @@ class TTPSMNU(TTPSMNet):
 
         self.frame.logger.info("E%d, L%d: %s" % (epochCount, self.countTrain, self.frame.get_log_str()))
 
+    def draw_test_results(self, identifier, predD, trueD, imgL, imgR, logSigSqu):
+        """
+        Draw test results.
+
+        predD: Dimension (B, H, W)
+        trueD: Dimension (B, H, W)
+        imgL: Dimension (B, C, H, W).
+        imgR: Dimension (B, C, H, W).
+        logSigSqu: Dimension (B, H, W).
+        """
+
+        batchSize = predD.size()[0]
+        
+        for i in range(batchSize):
+            outDisp = predD[i, :, :].detach().cpu().numpy()
+            gdtDisp = trueD[i, :, :].detach().cpu().numpy()
+
+            gdtMin = gdtDisp.min()
+            gdtMax = gdtDisp.max()
+
+            # outDisp = outDisp - outDisp.min()
+            outDisp = outDisp - gdtMin
+            gdtDisp = gdtDisp - gdtMin
+
+            # outDisp = outDisp / outDisp.max()
+            outDisp = np.clip( outDisp / gdtMax, 0.0, 1.0 )
+            gdtDisp = gdtDisp / gdtMax
+
+            # Create a matplotlib figure.
+            fig = plt.figure(figsize=(12.8, 9.6), dpi=300)
+
+            ax = plt.subplot(2, 2, 1)
+            plt.tight_layout()
+            ax.set_title("Ref")
+            ax.axis("off")
+            img0 = imgL[i, :, :, :].permute((1,2,0)).cpu().numpy()
+            img0 = img0 - img0.min()
+            img0 = img0 / img0.max()
+            plt.imshow( img0 )
+
+            # ax = plt.subplot(2, 2, 3)
+            # plt.tight_layout()
+            # ax.set_title("Tst")
+            # ax.axis("off")
+            # img1 = imgR[i, :, :, :].permute((1,2,0)).cpu().numpy()
+            # img1 = img1 - img1.min()
+            # img1 = img1 / img1.max()
+            # plt.imshow( img1 )
+
+            ax = plt.subplot(2, 2, 3)
+            plt.tight_layout()
+            ax.set_title("Sigma")
+            ax.axis("off")
+
+            # Calculate sigma.
+            sigma = torch.squeeze( torch.sqrt( torch.exp( logSigSqu ) ), 0 ).cpu().numpy()
+            
+            sigma = sigma - sigma.min()
+            sigma = sigma / sigma.max()
+            plt.imshow( sigma )
+
+            ax = plt.subplot(2, 2, 2)
+            plt.tight_layout()
+            ax.set_title("Ground truth")
+            ax.axis("off")
+            plt.imshow( gdtDisp )
+
+            ax = plt.subplot(2, 2, 4)
+            plt.tight_layout()
+            ax.set_title("Prediction")
+            ax.axis("off")
+            plt.imshow( outDisp )
+
+            figName = "%s_%02d" % (identifier, i)
+            figName = self.frame.compose_file_name(figName, "png", subFolder=self.testResultSubfolder)
+            plt.savefig(figName)
+
+            plt.close(fig)
+
     # Overload parent's function.
     def test(self, imgL, imgR, disp, epochCount):
         self.check_frame()
@@ -510,13 +589,15 @@ class TTPSMNU(TTPSMNet):
 
         imgL = imgL.cuda()
         imgR = imgR.cuda()
+        disp = disp.cuda()
 
         with torch.no_grad():
             output3, logSigSqu = self.model( imgL, imgR )
 
-        output = torch.squeeze( output3.data.cpu(), 1 )
+        # output = torch.squeeze( output3.data.cpu(), 1 )
+        output = torch.squeeze( output3, 1 )
         logSigSqu.clamp_(-10, 10)
-        logSigSqu = logSigSqu.data.cpu()
+        # logSigSqu = logSigSqu.data.cpu()
 
         dispStartingIndex = disp.shape[1] - output.shape[1]
 
@@ -544,7 +625,7 @@ class TTPSMNU(TTPSMNet):
 
         # Draw and save results.
         identifier = "test_%d" % (count - 1)
-        self.draw_test_results( identifier, output, disp, imgL, imgR )
+        self.draw_test_results( identifier, output, disp, imgL, imgR, logSigSqu )
 
         # Test the existance of an AccumulatedValue object.
         if ( True == self.frame.have_accumulated_value("lossTest") ):
@@ -555,6 +636,74 @@ class TTPSMNU(TTPSMNet):
         self.frame.plot_accumulated_values()
 
         return loss.item()
+
+    def draw_infer_results(self, identifier, predD, imgL, imgR, logSigSqu):
+        """
+        Draw test results.
+
+        predD: Dimension (B, H, W)
+        imgL: Dimension (B, C, H, W).
+        imgR: Dimension (B, C, H, W).
+        """
+
+        batchSize = predD.size()[0]
+        
+        for i in range(batchSize):
+            outDisp = predD[i, :, :].detach().cpu().numpy()
+
+            outMin = outDisp.min()
+            outMax = outDisp.max()
+
+            # outDisp = outDisp - outDisp.min()
+            outDisp = outDisp - outMin
+
+            # outDisp = outDisp / outDisp.max()
+            outDisp = np.clip( outDisp / outMax, 0.0, 1.0 )
+
+            # Create a matplotlib figure.
+            fig = plt.figure(figsize=(12.8, 9.6), dpi=300)
+
+            ax = plt.subplot(2, 2, 1)
+            plt.tight_layout()
+            ax.set_title("Ref")
+            ax.axis("off")
+            img0 = imgL[i, :, :, :].permute((1,2,0)).cpu().numpy()
+            img0 = img0 - img0.min()
+            img0 = img0 / img0.max()
+            plt.imshow( img0 )
+
+            ax = plt.subplot(2, 2, 3)
+            plt.tight_layout()
+            ax.set_title("Tst")
+            ax.axis("off")
+            img1 = imgR[i, :, :, :].permute((1,2,0)).cpu().numpy()
+            img1 = img1 - img1.min()
+            img1 = img1 / img1.max()
+            plt.imshow( img1 )
+
+            ax = plt.subplot(2, 2, 4)
+            plt.tight_layout()
+            ax.set_title("Sigma")
+            ax.axis("off")
+
+            # Calculate sigma.
+            sigma = torch.squeeze( torch.sqrt( torch.exp( logSigSqu ) ), 0 ).cpu().numpy()
+            
+            sigma = sigma - sigma.min()
+            sigma = sigma / sigma.max()
+            plt.imshow( sigma )
+
+            ax = plt.subplot(2, 2, 2)
+            plt.tight_layout()
+            ax.set_title("Prediction")
+            ax.axis("off")
+            plt.imshow( outDisp )
+
+            figName = "%s_%02d" % (identifier, i)
+            figName = self.frame.compose_file_name(figName, "png", subFolder=self.testResultSubfolder)
+            plt.savefig(figName)
+
+            plt.close(fig)
 
     def infer(self, imgL, imgR):
         self.check_frame()
@@ -569,10 +718,11 @@ class TTPSMNU(TTPSMNet):
         with torch.no_grad():
             output3, logSigSqu = self.model( imgL, imgR )
 
-        output = torch.squeeze( output3.data.cpu(), 1 )
+        # output = torch.squeeze( output3.data.cpu(), 1 )
+        output = torch.squeeze( output3, 1 )
 
         self.countTest += 1
 
         # Draw and save results.
         identifier = "infer_%d" % (self.countTest - 1)
-        self.draw_infer_results( identifier, output, imgL, imgR )
+        self.draw_infer_results( identifier, output, imgL, imgR, logSigSqu )
