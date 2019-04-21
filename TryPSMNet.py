@@ -176,8 +176,8 @@ if __name__ == "__main__":
             wf.logger.info("Begin inferring.")
             print_delimeter(title="Inferring loops.")
 
-            for batchIdx, ( imgL, imgR ) in enumerate( tt.imgInferLoader ):
-                wf.infer( imgL, imgR )
+            for batchIdx, ( imgL, imgR, Q ) in enumerate( tt.imgInferLoader ):
+                wf.infer( imgL, imgR, Q )
                 wf.logger.info("Infer %d." % ( batchIdx ))
 
             wf.logger.info("Done inferring.")

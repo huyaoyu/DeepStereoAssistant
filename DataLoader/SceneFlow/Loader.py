@@ -115,17 +115,18 @@ class myImageFolder(data.Dataset):
         return len(self.left)
 
 class inferImageFolder(data.Dataset):
-    def __init__(self, left, right, \
+    def __init__(self, left, right, Q, \
         loader=default_loader, preprocessor=None, \
         cropSize=(0,0)):
  
-        self.left = left
-        self.right = right
+        self.left   = left
+        self.right  = right
+        self.Q      = Q
         self.loader = loader
 
         # Modified.
         self.preprocessor  = preprocessor
-        self.cropSize = cropSize
+        self.cropSize      = cropSize
 
     def __getitem__(self, index):
         left  = self.left[index]
@@ -148,7 +149,10 @@ class inferImageFolder(data.Dataset):
             left_img  = self.preprocessor(left_img)
             right_img = self.preprocessor(right_img)
 
-        return left_img, right_img
+        # Load the Q matrix.
+        Q = self.Q[index]
+
+        return left_img, right_img, torch.from_numpy( np.loadtxt( Q, dtype=np.float32 ) )
 
     def __len__(self):
         return len(self.left)

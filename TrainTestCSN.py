@@ -349,7 +349,7 @@ class TTCSN(TrainTestBase):
 
             plt.close(fig)
 
-    def infer(self, imgL, imgR):
+    def infer(self, imgL, imgR, Q):
         self.check_frame()
 
         if ( False == self.flagInfer ):

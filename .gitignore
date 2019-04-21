@@ -10,4 +10,5 @@ Data/
 data/
 WD*/
 *.pth
+*.ply
 

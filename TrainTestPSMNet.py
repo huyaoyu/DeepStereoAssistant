@@ -1,5 +1,6 @@
 from __future__ import print_function
 
+import copy
 import numpy as np
 import os
 
@@ -13,12 +14,19 @@ from workflow import WorkFlow, TorchFlow
 from TrainTestBase import TrainTestBase
 
 from model import PyramidNet
+from PointCloud.PLYHelper import write_PLY
 
 import matplotlib.pyplot as plt
 if ( not ( "DISPLAY" in os.environ ) ):
     plt.switch_backend('agg')
     print("TrainTestCSN: Environment variable DISPLAY is not present in the system.")
     print("TrainTestCSN: Switch the backend of matplotlib to agg.")
+
+Q_FLIP = np.array( [ \
+    [ 1.0,  0.0,  0.0, 0.0 ], \
+    [ 0.0, -1.0,  0.0, 0.0 ], \
+    [ 0.0,  0.0, -1.0, 0.0 ], \
+    [ 0.0,  0.0,  0.0, 1.0 ] ], dtype=np.float32 )
 
 class TTPSMNet(TrainTestBase):
     def __init__(self, workingDir, frame=None):
@@ -332,7 +340,7 @@ class TTPSMNet(TrainTestBase):
 
         return loss.item()
 
-    def infer(self, imgL, imgR):
+    def infer(self, imgL, imgR, Q):
         self.check_frame()
 
         self.model.eval()
@@ -637,7 +645,7 @@ class TTPSMNU(TTPSMNet):
 
         return loss.item()
 
-    def draw_infer_results(self, identifier, predD, imgL, imgR, logSigSqu):
+    def draw_infer_results(self, identifier, ifNum, predD, imgL, imgR, logSigSqu, Q=None):
         """
         Draw test results.
 
@@ -646,10 +654,21 @@ class TTPSMNU(TTPSMNet):
         imgR: Dimension (B, C, H, W).
         """
 
+        imgID  = "%s_img_%d" % ( identifier, ifNum )
+        dispID = "%s_disp_%d" % ( identifier, ifNum )
+        sigID  = "%s_sig_%d" % ( identifier, ifNum )
+        plyID  = "%s_ply_%d" % ( identifier, ifNum )
+
         batchSize = predD.size()[0]
         
         for i in range(batchSize):
             outDisp = predD[i, :, :].detach().cpu().numpy()
+
+            dispFn = "%s_%02d" % (dispID, i)
+            dispFn = self.frame.compose_file_name(dispFn, "npy", subFolder=self.testResultSubfolder)
+            np.save(dispFn, outDisp)
+
+            dispOri = copy.deepcopy( outDisp )
 
             outMin = outDisp.min()
             outMax = outDisp.max()
@@ -663,15 +682,18 @@ class TTPSMNU(TTPSMNet):
             # Create a matplotlib figure.
             fig = plt.figure(figsize=(12.8, 9.6), dpi=300)
 
+            # Input reference image.
             ax = plt.subplot(2, 2, 1)
             plt.tight_layout()
             ax.set_title("Ref")
             ax.axis("off")
-            img0 = imgL[i, :, :, :].permute((1,2,0)).cpu().numpy()
+            imgOri = imgL[i, :, :, :].permute((1,2,0)).cpu().numpy()
+            img0 = copy.deepcopy( imgOri )
             img0 = img0 - img0.min()
             img0 = img0 / img0.max()
             plt.imshow( img0 )
 
+            # Input test image.
             ax = plt.subplot(2, 2, 3)
             plt.tight_layout()
             ax.set_title("Tst")
@@ -687,25 +709,41 @@ class TTPSMNU(TTPSMNet):
             ax.axis("off")
 
             # Calculate sigma.
-            sigma = torch.squeeze( torch.sqrt( torch.exp( logSigSqu ) ), 0 ).cpu().numpy()
+            sigma = torch.sqrt( torch.exp( logSigSqu[i, :, :] ) ).cpu().numpy()
+
+            sigFn = "%s_%02d" % (sigID, i)
+            sigFn = self.frame.compose_file_name(sigFn, "npy", subFolder=self.testResultSubfolder)
+            np.save(sigFn, sigma)
             
             sigma = sigma - sigma.min()
             sigma = sigma / sigma.max()
             plt.imshow( sigma )
 
+            # Output disparity.
             ax = plt.subplot(2, 2, 2)
             plt.tight_layout()
             ax.set_title("Prediction")
             ax.axis("off")
             plt.imshow( outDisp )
 
-            figName = "%s_%02d" % (identifier, i)
+            figName = "%s_%02d" % (imgID, i)
             figName = self.frame.compose_file_name(figName, "png", subFolder=self.testResultSubfolder)
             plt.savefig(figName)
 
             plt.close(fig)
 
-    def infer(self, imgL, imgR):
+            if ( Q is not None ):
+                # Save the PLY file.
+                q = Q[i, :, :].numpy()
+
+                print("B{}, q=\n{}".format(i, q))
+
+                plyFn = "%s_%02d" % ( plyID, i )
+                plyFn = self.frame.compose_file_name( plyFn, "ply", subFolder=self.testResultSubfolder )
+                
+                write_PLY( plyFn, dispOri, q, color=img0 * 255)
+
+    def infer(self, imgL, imgR, Q):
         self.check_frame()
 
         self.model.eval()
@@ -723,6 +761,13 @@ class TTPSMNU(TTPSMNet):
 
         self.countTest += 1
 
+        # Create helper tensor for flipping Q.
+        QF = torch.from_numpy( Q_FLIP )
+
+        for i in range( Q.shape[0] ):
+            Q[i, :, :] = QF.mm( Q[i, :, :] )
+
         # Draw and save results.
-        identifier = "infer_%d" % (self.countTest - 1)
-        self.draw_infer_results( identifier, output, imgL, imgR, logSigSqu )
+        identifier = "infer" 
+        self.draw_infer_results( identifier, self.countTest - 1, output, imgL, imgR, logSigSqu, Q )
+        

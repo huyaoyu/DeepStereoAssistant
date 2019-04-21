@@ -29,6 +29,7 @@ DATASET_LIST_TESTING_DSP_L = "InputDisparityTest.txt"
 
 DATASET_LIST_INFERRING_IMG_L = "InputImageInferL.txt"
 DATASET_LIST_INFERRING_IMG_R = "InputImageInferR.txt"
+DATASET_LIST_INFERRING_Q     = "InputQ.txt"
 
 class TrainTestBase(object):
     def __init__(self, workingDir, frame=None):
@@ -241,12 +242,14 @@ class TrainTestBase(object):
             if ( True == self.dataFileList ):
                 imgInferL = read_string_list( self.datasetRootDir + "/" + DATASET_LIST_INFERRING_IMG_L )
                 imgInferR = read_string_list( self.datasetRootDir + "/" + DATASET_LIST_INFERRING_IMG_R )
+                Q         = read_string_list( self.datasetRootDir + "/" + DATASET_LIST_INFERRING_Q )
             else:
                 raise Exception("Please use data file list when inferring.")
             
             if ( 0 != self.dataEntries ):
                 imgInferL = imgInferL[0:self.dataEntries]
                 imgInferR = imgInferR[0:self.dataEntries]
+                Q         = Q[0:self.dataEntries]
 
         # Dataloader.
         if ( True == self.flagGrayscale ):
@@ -269,7 +272,7 @@ class TrainTestBase(object):
                 self.datasetTest, \
                 batch_size=1, shuffle=False, num_workers=self.dlNumWorkers, drop_last=self.dlDropLast )
         else:
-            self.datasetInfer = DA.inferImageFolder( imgInferL,  imgInferR, preprocessor=preprocessor, cropSize=self.dlCropTest )
+            self.datasetInfer = DA.inferImageFolder( imgInferL,  imgInferR, Q, preprocessor=preprocessor, cropSize=self.dlCropTest )
 
             self.imgInferLoader = torch.utils.data.DataLoader( \
                 self.datasetInfer, \
