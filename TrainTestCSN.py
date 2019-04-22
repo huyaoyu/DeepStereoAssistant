@@ -222,6 +222,8 @@ class TTCSN(TrainTestBase):
             img0 = image0[i, :, :, :].permute((1,2,0)).cpu().numpy()
             img0 = img0 - img0.min()
             img0 = img0 / img0.max()
+            if ( 1 == img0.shape[2] ):
+                img0 = img0[:, :, 0]
             plt.imshow( img0 )
 
             ax = plt.subplot(2, 2, 3)
@@ -231,6 +233,8 @@ class TTCSN(TrainTestBase):
             img1 = image1[i, :, :, :].permute((1,2,0)).cpu().numpy()
             img1 = img1 - img1.min()
             img1 = img1 / img1.max()
+            if ( 1 == img1.shape[2] ):
+                img1 = img1[:, :, 0]
             plt.imshow( img1 )
 
             ax = plt.subplot(2, 2, 2)
@@ -326,6 +330,8 @@ class TTCSN(TrainTestBase):
             img0 = image0[i, :, :, :].permute((1,2,0)).cpu().numpy()
             img0 = img0 - img0.min()
             img0 = img0 / img0.max()
+            if ( 1 == img0.shape[2] ):
+                img0 = img0[:, :, 0]
             plt.imshow( img0 )
 
             ax = plt.subplot(2, 2, 3)
@@ -335,6 +341,8 @@ class TTCSN(TrainTestBase):
             img1 = image1[i, :, :, :].permute((1,2,0)).cpu().numpy()
             img1 = img1 - img1.min()
             img1 = img1 / img1.max()
+            if ( 1 == img1.shape[2] ):
+                img1 = img1[:, :, 0]
             plt.imshow( img1 )
 
             ax = plt.subplot(2, 2, 4)
