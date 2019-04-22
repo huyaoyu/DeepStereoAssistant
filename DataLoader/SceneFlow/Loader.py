@@ -4,6 +4,7 @@ from __future__ import print_function
 # Most of the content of this file is copied from PSMNet.
 # https://github.com/JiaRenChang/PSMNet
 
+import cv2
 import numpy as np
 from PIL import Image, ImageOps
 import random
@@ -33,12 +34,15 @@ def is_image_file(filename):
 def default_loader(path):
     return Image.open(path).convert('RGB')
 
+def cv2_loader(path):
+    return cv2.imread(path, cv2.IMREAD_UNCHANGED)
+
 def disparity_loader(path):
     return IO.readPFM(path)
 
 class myImageFolder(data.Dataset):
     def __init__(self, left, right, left_disparity, training, \
-        loader=default_loader, dploader= disparity_loader, preprocessor=None, \
+        loader=cv2_loader, dploader= disparity_loader, preprocessor=None, \
         cropSize=(0,0)):
  
         self.left = left
@@ -61,10 +65,13 @@ class myImageFolder(data.Dataset):
         # import ipdb; ipdb.set_trace()
         right_img = self.loader(right)
         dataL, scaleL = self.dploader(disp_L)
-        dataL = np.ascontiguousarray(dataL,dtype=np.float32)
+        dataL = np.ascontiguousarray(dataL, dtype=np.float32)
 
         if self.training:  
-            w, h = left_img.size
+            # w, h = left_img.size
+
+            w = left_img.shape[1]
+            h = left_img.shape[0]
 
             if ( self.cropSize[0] <= 0 or self.cropSize[1] <= 0):
                 th, tw = h, w
@@ -77,8 +84,12 @@ class myImageFolder(data.Dataset):
             x1 = random.randint(0, w - tw)
             y1 = random.randint(0, h - th)
 
-            left_img = left_img.crop((x1, y1, x1 + tw, y1 + th))
-            right_img = right_img.crop((x1, y1, x1 + tw, y1 + th))
+            # left_img = left_img.crop((x1, y1, x1 + tw, y1 + th))
+            # right_img = right_img.crop((x1, y1, x1 + tw, y1 + th))
+
+            # cv2 compatible crop.
+            left_img  = left_img[ y1:y1 + th, x1:x1 + tw ]
+            right_img = right_img[ y1:y1 + th, x1:x1 + tw ]
 
             dataL = dataL[y1:y1 + th, x1:x1 + tw]
 
@@ -92,15 +103,23 @@ class myImageFolder(data.Dataset):
 
             return left_img, right_img, dataL
         else:
-            w, h = left_img.size
+            # w, h = left_img.size
+
+            w = left_img.shape[1]
+            h = left_img.shape[0]
 
             if ( self.cropSize[0] <= 0 or self.cropSize[1] <= 0 ):
                 ch, cw = h, w
             else:
                 ch, cw = self.cropSize[0], self.cropSize[1]
 
-            left_img  = left_img.crop( (w-cw, h-ch, w, h))
-            right_img = right_img.crop((w-cw, h-ch, w, h))
+            # left_img  = left_img.crop( (w-cw, h-ch, w, h))
+            # right_img = right_img.crop((w-cw, h-ch, w, h))
+
+            # cv2 compatible crop.
+            left_img  = left_img[ h-ch:h, w-cw:w ]
+            right_img = right_img[ h-ch:h, w-cw:w ]
+
         #    processed = PreProcess.get_transform(augment=False)  
         #    left_img       = processed(left_img)
         #    right_img      = processed(right_img)

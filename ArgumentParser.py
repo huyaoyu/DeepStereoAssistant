@@ -31,6 +31,9 @@ parser.add_argument("--max-disparity", type=int, default=512, \
 parser.add_argument("--grayscale", action="store_true", default=False, \
     help="Work on grayscale images.")
 
+parser.add_argument("--sobel-x", action="store_true", default=False, \
+    help="Work on Sobel filtered images. The filter is applied along x direction. Grayscale image will automatically be used no matter the --grayscale is issued or not.")
+
 parser.add_argument("--dl-batch-size", type=int, default=2, \
     help="The batch size of the dataloader.")
 

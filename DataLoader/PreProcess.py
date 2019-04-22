@@ -4,6 +4,7 @@ from __future__ import print_function
 # Most of the content of this file is copied from PSMNet.
 # https://github.com/JiaRenChang/PSMNet
 
+import cv2
 import random
 import torch
 import torchvision.transforms as transforms
@@ -117,6 +118,14 @@ class Grayscale(object):
 class SingleChannel(object):
     def __call__(self, x):
         return x[0].view( ( 1, x.size()[1], x.size()[2] ) )
+
+class GrayscaleNoTensor(object):
+    def __call__(self, x):
+        return cv2.cvtColor( x, cv2.COLOR_BGR2GRAY )
+
+class SobelXNoTensor(object):
+    def __call__(self, x):
+        return cv2.Sobel(x, cv2.CV_32FC1, 1, 0)
 
 class Saturation(object):
 

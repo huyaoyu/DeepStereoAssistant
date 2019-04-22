@@ -41,6 +41,7 @@ class TrainTestBase(object):
         self.countTest  = 0
 
         self.flagGrayscale = False
+        self.flagSobelX    = False
 
         self.trainIntervalAccWrite = 10    # The interval to write the accumulated values.
         self.trainIntervalAccPlot  = 1     # The interval to plot the accumulate values.
@@ -109,6 +110,20 @@ class TrainTestBase(object):
         if ( self.frame is None ):
             raise Exception("self.frame must not be None.")
     
+    def enable_grayscale(self):
+        self.check_frame()
+
+        self.flagGrayscale = True
+
+        self.frame.logger.info("Grayscale image enabled.")
+
+    def enable_Sobel_x(self):
+        self.check_frame()
+
+        self.flagSobelX = True
+
+        self.frame.logger.info("Sobel-x image enabled. Image will be converted into grayscale first.")
+
     def set_learning_rate(self, lr):
         self.check_frame()
 
@@ -252,10 +267,21 @@ class TrainTestBase(object):
                 Q         = Q[0:self.dataEntries]
 
         # Dataloader.
-        if ( True == self.flagGrayscale ):
+        if ( True == self.flagSobelX ):
             preprocessor = transforms.Compose( [ \
+                PreProcess.GrayscaleNoTensor(), \
+                PreProcess.SobelXNoTensor(), \
                 transforms.ToTensor(), \
-                PreProcess.Grayscale(), \
+                PreProcess.SingleChannel() ] )
+        elif ( True == self.flagGrayscale ):
+            # preprocessor = transforms.Compose( [ \
+            #     transforms.ToTensor(), \
+            #     PreProcess.Grayscale(), \
+            #     PreProcess.SingleChannel() ] )
+
+            preprocessor = transforms.Compose( [ \
+                PreProcess.GrayscaleNoTensor(), \
+                transforms.ToTensor(), \
                 PreProcess.SingleChannel() ] )
         else:
             preprocessor = PreProcess.get_transform(augment=False)

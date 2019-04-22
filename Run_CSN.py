@@ -121,7 +121,13 @@ if __name__ == "__main__":
         if ( True == args.multi_gpus ):
             tt.enable_multi_GPUs()
 
-        tt.flagGrayscale = args.grayscale
+        if ( True == args.sobel_x ):
+            tt.enable_Sobel_x()
+
+        if ( True == args.grayscale ):
+            tt.enable_grayscale()
+
+        # tt.flagGrayscale = args.grayscale
 
         # Set parameters.
         tt.set_learning_rate(args.lr)
