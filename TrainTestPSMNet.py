@@ -543,6 +543,8 @@ class TTPSMNU(TTPSMNet):
             img0 = imgL[i, :, :, :].permute((1,2,0)).cpu().numpy()
             img0 = img0 - img0.min()
             img0 = img0 / img0.max()
+            if ( 1 == img0.shape[2] ):
+                img0 = img0[:, :, 0]
             plt.imshow( img0 )
 
             # ax = plt.subplot(2, 2, 3)
@@ -691,6 +693,8 @@ class TTPSMNU(TTPSMNet):
             img0 = copy.deepcopy( imgOri )
             img0 = img0 - img0.min()
             img0 = img0 / img0.max()
+            if ( 1 == img0.shape[2] ):
+                img0 = img0[:, :, 0]
             plt.imshow( img0 )
 
             # Input test image.
