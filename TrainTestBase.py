@@ -120,7 +120,8 @@ class TrainTestBase(object):
     def enable_Sobel_x(self):
         self.check_frame()
 
-        self.flagSobelX = True
+        self.flagSobelX    = True
+        self.flagGrayscale = True
 
         self.frame.logger.info("Sobel-x image enabled. Image will be converted into grayscale first.")
 
