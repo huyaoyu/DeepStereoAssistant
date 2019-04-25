@@ -154,15 +154,22 @@ class inferImageFolder(data.Dataset):
         left_img = self.loader(left)
         right_img = self.loader(right)
 
-        w, h = left_img.size
+        # w, h = left_img.size
+
+        w = left_img.shape[1]
+        h = left_img.shape[0]
 
         if ( self.cropSize[0] <= 0 or self.cropSize[1] <= 0 ):
             ch, cw = h, w
         else:
             ch, cw = self.cropSize[0], self.cropSize[1]
 
-        left_img  = left_img.crop( (w-cw, h-ch, w, h))
-        right_img = right_img.crop((w-cw, h-ch, w, h))
+        # left_img  = left_img.crop( (w-cw, h-ch, w, h))
+        # right_img = right_img.crop((w-cw, h-ch, w, h))
+
+        # cv2 compatible crop.
+        left_img  = left_img[ h-ch:h, w-cw:w ]
+        right_img = right_img[ h-ch:h, w-cw:w ]
 
         if ( self.preprocessor is not None ):
             left_img  = self.preprocessor(left_img)
