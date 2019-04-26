@@ -62,11 +62,11 @@ class MyWF(TorchFlow.TorchFlow):
 
         return self.tt.test(imgL, imgR, disp, epochCount)
 
-    def infer(self, imgL, imgR):
+    def infer(self, imgL, imgR, Q):
 
         self.check_tt()
 
-        self.tt.infer( imgL, imgR )
+        self.tt.infer( imgL, imgR, Q )
 
     # Overload the function finalize().
     def finalize(self):
