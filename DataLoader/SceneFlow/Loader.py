@@ -135,7 +135,7 @@ class myImageFolder(data.Dataset):
 
 class inferImageFolder(data.Dataset):
     def __init__(self, left, right, Q, \
-        loader=default_loader, preprocessor=None, \
+        loader=cv2_loader, preprocessor=None, \
         cropSize=(0,0)):
  
         self.left   = left
