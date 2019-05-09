@@ -1,6 +1,7 @@
 from __future__ import print_function
 
 import copy
+import cv2
 import numpy as np
 import os
 
@@ -553,6 +554,10 @@ class TTPSMNU(TTPSMNet):
             img0 = img0 / img0.max()
             if ( 1 == img0.shape[2] ):
                 img0 = img0[:, :, 0]
+            else:
+                # Assuming it is a 3-channel image.
+                img0 = cv2.cvtColor(img0, cv2.COLOR_BGR2RGB)
+
             plt.imshow( img0 )
 
             # ax = plt.subplot(2, 2, 3)
@@ -703,6 +708,10 @@ class TTPSMNU(TTPSMNet):
             img0 = img0 / img0.max()
             if ( 1 == img0.shape[2] ):
                 img0 = img0[:, :, 0]
+            else:
+                # Assuming it is a 3-channel image.
+                img0 = cv2.cvtColor(img0, cv2.COLOR_BGR2RGB)
+
             plt.imshow( img0 )
 
             # Input test image.
@@ -715,6 +724,10 @@ class TTPSMNU(TTPSMNet):
             img1 = img1 / img1.max()
             if ( 1 == img1.shape[2] ):
                 img1 = img1[:, :, 0]
+            else:
+                # Assuming it is a 3-channel image.
+                img1 = cv2.cvtColor(img1, cv2.COLOR_BGR2RGB)
+
             plt.imshow( img1 )
 
             ax = plt.subplot(2, 2, 4)
