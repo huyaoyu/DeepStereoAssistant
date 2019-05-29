@@ -530,7 +530,7 @@ class PSMNetWithUncertainty(nn.Module):
         else:
             return pred3, logSigmaSquredOverD
 
-class PSMNU_Inspect(nn.Module):
+class PSMNU_Inspect(PSMNetWithUncertainty):
     def __init__(self, inChannels, featureChannels, maxDisp):
         super(PSMNU_Inspect, self).__init__(inChannels, featureChannels, maxDisp)
 
@@ -628,7 +628,12 @@ class PSMNU_Inspect(nn.Module):
 
         # Prepare for hourglass layers.
         cost0 = self.ph1(cost)
+        # Save images of cost0 for inspection.
+        self.save_tensor_as_images( cost0, "cost0_ph1" )
+
         cost0 = self.ph2(cost0) + cost0
+        # Save images of cost0 for inspection.
+        self.save_tensor_as_images( cost0, "cost0_ph2" )
 
         # Hourglass layers.
         out1, pre1, post1 = self.hg1( cost0, None, None )

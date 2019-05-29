@@ -88,6 +88,9 @@ parser.add_argument("--auto-save-model", type=int, default=0, \
 parser.add_argument("--disable-stream-logger", action="store_true", default=False, \
     help="Disable the stream logger of WorkFlow.")
 
+parser.add_argument("--inspect", action="store_true", default=False, \
+    help="Enable the inspection mode.")
+
 args = parser.parse_args()
 
 def convert_str_2_int_list(s, d=","):

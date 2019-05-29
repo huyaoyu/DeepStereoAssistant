@@ -131,6 +131,12 @@ if __name__ == "__main__":
         else:
             tt.switch_off_infer()
 
+        if ( True == args.inspect ):
+            tt.flagInspect = True
+            print("Inspection enabled.")
+        else:
+            tt.flagInspect = False
+
         # Initialization.
         print_delimeter(title = "Initialize.")
         wf.initialize()
@@ -154,6 +160,9 @@ if __name__ == "__main__":
                         # import ipdb; ipdb.set_trace()
                         wf.train( imgCropL, imgCropR, dispCrop, i )
 
+                        if ( True == tt.flagInspect ):
+                            wf.logger.warning("Inspection enabled.")
+
                         # Check if we need a test.
                         if ( 0 != args.test_loops ):
                             if ( tt.countTrain % args.test_loops == 0 ):
@@ -174,6 +183,10 @@ if __name__ == "__main__":
 
                 for batchIdx, ( imgL, imgR, disp ) in enumerate( tt.imgTestLoader ):
                     loss = wf.test( imgL, imgR, disp, 0 )
+
+                    if ( True == tt.flagInspect ):
+                        wf.logger.warning("Inspection enabled.")
+
                     wf.logger.info("Test %d, loss = %f." % ( batchIdx, loss ))
                     totalLoss += loss
 
@@ -184,6 +197,10 @@ if __name__ == "__main__":
 
             for batchIdx, ( imgL, imgR, Q ) in enumerate( tt.imgInferLoader ):
                 wf.infer( imgL, imgR, Q)
+
+                if ( True == tt.flagInspect ):
+                    wf.logger.warning("Inspection enabled")
+
                 wf.logger.info("Infer %d." % ( batchIdx ))
 
             wf.logger.info("Done inferring.")

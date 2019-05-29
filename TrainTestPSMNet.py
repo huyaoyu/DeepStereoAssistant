@@ -382,6 +382,8 @@ class TTPSMNU(TTPSMNet):
     def __init__(self, workingDir, frame=None):
         super(TTPSMNU, self).__init__( workingDir, frame )
 
+        self.flagInspect = False # Set True to perform inspection. NOTE: High filesystem memory consumption.
+
     # Overload parent's function.
     def init_workflow(self):
         # === Create the AccumulatedObjects. ===
@@ -426,10 +428,16 @@ class TTPSMNU(TTPSMNet):
             raise Exception("The maximum disparity must be positive.")
 
         # Neural net.
-        if ( True == self.flagGrayscale ):
-            self.model = PyramidNet.PSMNetWithUncertainty(1, 32, self.maxDisp)
+        if ( False == self.flagInspect ):
+            if ( True == self.flagGrayscale ):
+                self.model = PyramidNet.PSMNetWithUncertainty(1, 32, self.maxDisp)
+            else:
+                self.model = PyramidNet.PSMNetWithUncertainty(3, 32, self.maxDisp)
         else:
-            self.model = PyramidNet.PSMNetWithUncertainty(3, 32, self.maxDisp)
+            if ( True == self.flagGrayscale ):
+                self.model = PyramidNet.PSMNU_Inspect(1, 32, self.maxDisp)
+            else:
+                self.model = PyramidNet.PSMNU_Inspect(3, 32, self.maxDisp)
 
         # import ipdb; ipdb.set_trace()
         # Check if we have to read the model from filesystem.
@@ -441,6 +449,10 @@ class TTPSMNU(TTPSMNet):
 
             self.model = self.frame.load_model( self.model, modelFn )
 
+        # Initialize the working directory for inspection.
+        if ( True == self.flagInspect ):
+            self.model.initialize_working_dir(self.frame.workingDir + "/Inspect")
+
         self.frame.logger.info("PSMNet has %d model parameters." % \
             ( sum( [ p.data.nelement() for p in self.model.parameters() ] ) ) )
 
@@ -450,6 +462,9 @@ class TTPSMNU(TTPSMNet):
 
         if ( True == self.flagInfer ):
             raise Exception("Could not train with infer mode.")
+
+        # Increase counter.
+        self.countTrain += 1
 
         self.model.train()
         imgL = Variable( torch.FloatTensor(imgL) )
@@ -462,7 +477,11 @@ class TTPSMNU(TTPSMNet):
 
         self.optimizer.zero_grad()
 
-        out1, out2, out3, logSigSqu = self.model(imgL, imgR)
+        if ( False == self.flagInspect ):
+            out1, out2, out3, logSigSqu = self.model(imgL, imgR)
+        else:
+            prefix = "%s_Tr%d" % ( self.frame.prefix, self.countTrain )
+            out1, out2, out3, logSigSqu = self.model(imgL, imgR, prefix)
 
         out1 = torch.squeeze( out1, 1 )
         out2 = torch.squeeze( out2, 1 )
@@ -495,8 +514,6 @@ class TTPSMNU(TTPSMNet):
 
         self.frame.AV["loss"].push_back( loss.item() )
         self.frame.AV["sigma2"].push_back( torch.exp( avgLogSigSqu ).item() )
-
-        self.countTrain += 1
 
         if ( self.countTrain % self.trainIntervalAccWrite == 0 ):
             self.frame.write_accumulated_values()
@@ -606,6 +623,9 @@ class TTPSMNU(TTPSMNet):
         if ( True == self.flagInfer ):
             raise Exception("Could not test in the infer mode.")
 
+        # Increase the counter.
+        self.countTest += 1
+
         self.model.eval()
         imgL = Variable( torch.FloatTensor( imgL ) )
         imgR = Variable( torch.FloatTensor( imgR ) )
@@ -615,7 +635,11 @@ class TTPSMNU(TTPSMNet):
         disp = disp.cuda()
 
         with torch.no_grad():
-            output3, logSigSqu = self.model( imgL, imgR )
+            if ( False == self.flagInspect ):
+                output3, logSigSqu = self.model( imgL, imgR )
+            else:
+                prefix = "%s_Te%d" % ( self.frame.prefix, self.countTest )
+                output3, logSigSqu = self.model( imgL, imgR, prefix )
 
         # output = torch.squeeze( output3.data.cpu(), 1 )
         output = torch.squeeze( output3, 1 )
@@ -638,8 +662,6 @@ class TTPSMNU(TTPSMNet):
 
             loss = torch.mean( torch.abs( mExpLogSigSqu * output[mask] - mExpLogSigSqu * disp[mask] ) )
             loss = ( loss + torch.mean( logSigSqu ) ) / 2.0
-
-        self.countTest += 1
 
         if ( True == self.flagTest ):
             count = self.countTest
@@ -773,6 +795,9 @@ class TTPSMNU(TTPSMNet):
     def infer(self, imgL, imgR, Q):
         self.check_frame()
 
+        # Increase the counter.
+        self.countTest += 1
+
         self.model.eval()
         imgL = Variable( torch.FloatTensor( imgL ) )
         imgR = Variable( torch.FloatTensor( imgR ) )
@@ -781,12 +806,14 @@ class TTPSMNU(TTPSMNet):
         imgR = imgR.cuda()
 
         with torch.no_grad():
-            output3, logSigSqu = self.model( imgL, imgR )
+            if ( False == self.flagInspect ):
+                output3, logSigSqu = self.model( imgL, imgR )
+            else:
+                prefix = "%s_In%d" % ( self.frame.prefix, self.countTest )
+                output3, logSigSqu = self.model( imgL, imgR, prefix )
 
         # output = torch.squeeze( output3.data.cpu(), 1 )
         output = torch.squeeze( output3, 1 )
-
-        self.countTest += 1
 
         # Create helper tensor for flipping Q.
         QF = torch.from_numpy( Q_FLIP )
