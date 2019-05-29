@@ -12,4 +12,6 @@ WD*/
 *.pth
 *.ply
 CreateDisparityRanges.sh
+.ipynb_checkpoints/
+*.ipynb
 

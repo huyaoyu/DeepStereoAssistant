@@ -7,8 +7,10 @@ from __future__ import print_function
 # https://github.com/JiaRenChang/PSMNet
 # 
 
+import cv2
 import math
 import numpy as np
+import os
 
 import torch
 import torch.nn as nn
@@ -459,6 +461,155 @@ class PSMNetWithUncertainty(nn.Module):
 
         refFeature = self.featureExtraction(L)
         tgtFeature = self.featureExtraction(R)
+
+        # Make new cost volume as 5D tensor.
+        cost = Variable( \
+            torch.FloatTensor( refFeature.size()[0], refFeature.size()[1]*2, int(self.maxDisp/4), refFeature.size()[2], refFeature.size()[3]).zero_() \
+                       ).cuda()
+
+        for i in range( int(self.maxDisp / 4) ):
+            if i > 0 :
+             cost[:, :refFeature.size()[1],  i, :, i:] = refFeature[ :, :, :, i:   ]
+             cost[:,  refFeature.size()[1]:, i, :, i:] = tgtFeature[ :, :, :,  :-i ]
+            else:
+             cost[:, :refFeature.size()[1],  i, :, :] = refFeature
+             cost[:,  refFeature.size()[1]:, i, :, :] = tgtFeature
+
+        cost = cost.contiguous()
+
+        # Prepare for hourglass layers.
+        cost0 = self.ph1(cost)
+        cost0 = self.ph2(cost0) + cost0
+
+        # Hourglass layers.
+        out1, pre1, post1 = self.hg1( cost0, None, None )
+        # import ipdb; ipdb.set_trace()
+        out1 = out1 + cost0
+
+        out2, pre2, post2 = self.hg2( out1, pre1, post1 )
+        out2 = out2 + cost0
+
+        out3, pre3, post3 = self.hg3( out2, pre1, post2 )
+        out3 = out3 + cost0
+
+        # Classification in the disparity dimension.
+        cost1 = self.cd1( out1 )
+        cost2 = self.cd2( out2 ) + cost1
+
+        # ===================================================================
+        # ==================== Different with PSMNet. =======================
+        # ===================================================================
+        # cost3 = self.cd3( out3 ) + cost2
+        lastClassification = self.cd3( out3 )
+        cost3 = lastClassification[:, 0, :, :, :] + cost2
+        
+        logSigmaSquredOverD = lastClassification[:, 1, :, :, :]
+        logSigmaSquredOverD = F.interpolate( logSigmaSquredOverD, [ L.size()[2], L.size()[3] ], mode="bilinear", align_corners=False )
+        logSigmaSquredOverD = torch.squeeze( logSigmaSquredOverD, 1 )
+        logSigmaSquredOverD = torch.mean( logSigmaSquredOverD, 1, keepdim=False )
+
+        # Disparity regression.
+        if ( self.training ):
+            cost1 = F.interpolate( cost1, [ self.maxDisp, L.size()[2], L.size()[3] ], mode="trilinear", align_corners=False )
+            cost1 = torch.squeeze( cost1, 1 )
+            pred1 = F.softmax( cost1, dim = 1 )
+            pred1 = DisparityRegression( self.maxDisp )( pred1 )
+
+            cost2 = F.interpolate( cost2, [ self.maxDisp, L.size()[2], L.size()[3] ], mode="trilinear", align_corners=False )
+            cost2 = torch.squeeze( cost2, 1 )
+            pred2 = F.softmax( cost2, dim = 1 )
+            pred2 = DisparityRegression( self.maxDisp )( pred2 )
+
+        cost3 = F.interpolate( cost3, [ self.maxDisp, L.size()[2], L.size()[3] ], mode="trilinear", align_corners=False )
+        cost3 = torch.squeeze( cost3, 1 )
+        pred3 = F.softmax( cost3, dim = 1 )
+        pred3 = DisparityRegression( self.maxDisp )( pred3 )
+
+        if ( self.training ):
+            return pred1, pred2, pred3, logSigmaSquredOverD
+        else:
+            return pred3, logSigmaSquredOverD
+
+class PSMNU_Inspect(nn.Module):
+    def __init__(self, inChannels, featureChannels, maxDisp):
+        super(PSMNU_Inspect, self).__init__(inChannels, featureChannels, maxDisp)
+
+        self.workingDir = "./PSMNU_Inspect"
+
+    def initialize_working_dir(self, wd=None):
+        if ( wd is not None ):
+            self.workingDir = wd
+        
+        if ( False == os.path.isdir(self.workingDir) ):
+            os.makedirs(self.workingDir)
+
+    def save_real_value_image(self, fn, img):
+        """
+        img will be normalized and scaled to 0-255. Then a
+        single channel image will be created and then witten 
+        to the filesystem.
+
+        img must be a NumPy array.
+
+        fn is a the filename without the extension.
+        """
+
+        img = ( img - img.min() ) / ( img.max() - img.min() ) * 255
+        img = img.astype( np.uint8 )
+
+        # Full fill the filename.
+        fn = "%s.png" % (fn)
+
+        # Save the image by OpenCV.
+        cv2.imwrite(fn, img)
+
+    def save_tensor_as_images(self, t, prefix):
+        """
+        t: The tensor. It is assumed that t is either a 4D or 5D tensor.
+        """
+        
+        dims = len( t.size() )
+
+        if ( 4 != dims and 5 != dims ):
+            raise Exception("t must be a 4D or 5D tensor. dims = %d." % (dims))
+
+        # Find out the dimensions.
+        if ( 4 == dims ):
+            D = 1
+        else:
+            D = t.size()[2]
+
+        N = t.size()[0]
+        C = t.size()[1]
+        H = t.size()[-2]
+        W = t.size()[-1]
+
+        # Transfer data to CPU.
+        tc = t.cpu()
+
+        # View the tensor as a 5D tensor.
+        tc = tc.view( N, C, D, H, W )
+
+        for n in range(N):
+            for c in range(C):
+                for d in range(D):
+                    # Convert a single plane into a NumPy array.
+                    img = tc[n,c,d,:,:].numpy()
+
+                    # Compose the filename.
+                    fn = "%s/%s_%d.%d.%d" % ( self.workingDir, prefix, n, c, d )
+
+                    # Save the plane as an image.
+                    self.save_real_value_image(fn, img)
+
+    def forward(self, L, R, prefix):
+        # Feature extraction.
+        refFeature = self.featureExtraction(L)
+        tgtFeature = self.featureExtraction(R)
+
+        # Save the extracted features to the filesystem.
+        self.save_tensor_as_images( refFeature, "refFeature" )
+        self.save_tensor_as_images( tgtFeature, "tgtFeature" )
 
         # Make new cost volume as 5D tensor.
         cost = Variable( \

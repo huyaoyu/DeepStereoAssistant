@@ -1,0 +1,13 @@
+run Run_Setup_PSMNU.py \
+--working-dir /home/yaoyu/Projects/DeepStereoAssistant/WD/PU_01_BGR_IF \
+--prefix Setup_ \
+--dl-batch-size 1 \
+--dl-num-workers 1 \
+--dl-crop-test "752, 1024" \
+--data-root-dir /media/yaoyu/DiskE/SceneFlow/Sampler \
+--data-file-list \
+--use-intermittent-plotter \
+--multi-gpus \
+--max-disparity 256 \
+--read-model PU_01_BGR_PSMNet.pkl \
+--infer
