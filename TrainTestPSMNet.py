@@ -383,6 +383,7 @@ class TTPSMNU(TTPSMNet):
         super(TTPSMNU, self).__init__( workingDir, frame )
 
         self.flagInspect = False # Set True to perform inspection. NOTE: High filesystem memory consumption.
+        self.inspector   = None
 
     # Overload parent's function.
     def init_workflow(self):
@@ -433,11 +434,15 @@ class TTPSMNU(TTPSMNet):
                 self.model = PyramidNet.PSMNetWithUncertainty(1, 32, self.maxDisp)
             else:
                 self.model = PyramidNet.PSMNetWithUncertainty(3, 32, self.maxDisp)
+            
+            self.inspector = None
         else:
             if ( True == self.flagGrayscale ):
                 self.model = PyramidNet.PSMNU_Inspect(1, 32, self.maxDisp)
             else:
                 self.model = PyramidNet.PSMNU_Inspect(3, 32, self.maxDisp)
+
+            self.inspector = PyramidNet.Inspector( self.frame.workingDir + "/Inspect" )
 
         # import ipdb; ipdb.set_trace()
         # Check if we have to read the model from filesystem.
@@ -451,7 +456,7 @@ class TTPSMNU(TTPSMNet):
 
         # Initialize the working directory for inspection.
         if ( True == self.flagInspect ):
-            self.model.initialize_working_dir(self.frame.workingDir + "/Inspect")
+            self.inspector.initialize_working_dir()
 
         self.frame.logger.info("PSMNet has %d model parameters." % \
             ( sum( [ p.data.nelement() for p in self.model.parameters() ] ) ) )
@@ -481,7 +486,7 @@ class TTPSMNU(TTPSMNet):
             out1, out2, out3, logSigSqu = self.model(imgL, imgR)
         else:
             prefix = "%s_Tr%d" % ( self.frame.prefix, self.countTrain )
-            out1, out2, out3, logSigSqu = self.model(imgL, imgR, prefix)
+            out1, out2, out3, logSigSqu = self.model(imgL, imgR, prefix, self.inspector)
 
         out1 = torch.squeeze( out1, 1 )
         out2 = torch.squeeze( out2, 1 )
@@ -639,7 +644,7 @@ class TTPSMNU(TTPSMNet):
                 output3, logSigSqu = self.model( imgL, imgR )
             else:
                 prefix = "%s_Te%d" % ( self.frame.prefix, self.countTest )
-                output3, logSigSqu = self.model( imgL, imgR, prefix )
+                output3, logSigSqu = self.model( imgL, imgR, prefix, self.inspector )
 
         # output = torch.squeeze( output3.data.cpu(), 1 )
         output = torch.squeeze( output3, 1 )
@@ -810,7 +815,7 @@ class TTPSMNU(TTPSMNet):
                 output3, logSigSqu = self.model( imgL, imgR )
             else:
                 prefix = "%s_In%d" % ( self.frame.prefix, self.countTest )
-                output3, logSigSqu = self.model( imgL, imgR, prefix )
+                output3, logSigSqu = self.model( imgL, imgR, prefix, self.inspector )
 
         # output = torch.squeeze( output3.data.cpu(), 1 )
         output = torch.squeeze( output3, 1 )
