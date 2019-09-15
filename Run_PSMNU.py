@@ -1,6 +1,8 @@
 
 from __future__ import print_function
 
+import time
+
 from workflow import WorkFlow, TorchFlow
 
 import ArgumentParser
@@ -196,7 +198,10 @@ if __name__ == "__main__":
             print_delimeter(title="Inferring loops.")
 
             for batchIdx, ( imgL, imgR, Q ) in enumerate( tt.imgInferLoader ):
+                startT = time.time()
                 wf.infer( imgL, imgR, Q)
+                endT = time.time()
+                wf.logger.info("Infer time: %fs." % (endT - startT))
 
                 if ( True == tt.flagInspect ):
                     wf.logger.warning("Inspection enabled")
