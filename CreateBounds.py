@@ -1,10 +1,53 @@
 from __future__ import print_function
 
 import argparse
+import copy
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 import os
+
+import IO
+
+DISP_INVALID = -1
+
+def save_float_image_normalized(fn, img, lowerBound=None, upperBound=None):
+    """
+    Save a float image as a image file.
+    fn: The output file name.
+    img: The input NumPy array.
+    lowerBound: The lower bound for clipping and normalization.
+    upperBound: The upper bound for clipping and normalization.
+
+    Set lowerBound or upperBound to None to use the minimum and maximum values
+    as the bounds for normalization.
+
+    NOTE: Only works with single channel image.
+    """
+
+    if ( 2 != len( img.shape ) ):
+        raise Exception("Only supports single channel image. img.shape = {}".format(img.shape))
+    
+    if ( lowerBound is not None and upperBound is not None ):
+        if ( lowerBound >= upperBound ):
+            raise Exception("Wrong bounds. [%f, %f]" % (lowerBound, upperBound))
+    
+    # Clip and normalize.
+    img = copy.deepcopy( img )
+
+    if ( lowerBound is None or upperBound is None ):
+        lowerBound = img.min()
+        upperBound = img.max()
+
+    img = np.clip( img, lowerBound, upperBound )
+    img = img - img.min()
+    img = img / img.max()
+
+    imgInt = img*255
+    imgInt = imgInt.astype(np.uint8)
+
+    # Save the image.
+    cv2.imwrite(fn, imgInt, [cv2.IMWRITE_PNG_COMPRESSION, 0])
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Create the lower and upper bounds file.")
@@ -29,8 +72,16 @@ if __name__ == "__main__":
         help="The base file name of the scaled disparity file.")
     parser.add_argument("--out-name-sig", type=str, default="Sigma", \
         help="The base file name of the scaled sigma file.")
+    parser.add_argument("--out-name-disp-img", type=str, default="Disparity", \
+        help="The base file name of the disparity image.")
+    parser.add_argument("--out-name-sig-img", type=str, default="SigmaGray", \
+        help="The base file name of the scaled sigma image.")
+    parser.add_argument("--n-invalid", type=int, default=0, \
+        help="Number of pixel columns to assign the 'invalid' value. Starting from the left border of the disparity map. This only affects the pfm file.")
     
     args = parser.parse_args()
+
+    print(args.disp)
 
     # Load the input files.
     disp = np.load(args.disp).astype(np.float32)
@@ -54,12 +105,29 @@ if __name__ == "__main__":
     if ( not os.path.isdir( args.out_dir ) ):
         os.makedirs( args.out_dir )
 
+    # Save the disparity as pfm file.
+    dispPFM = copy.deepcopy( dispR )
+    if ( args.n_invalid > 0 ):
+        if ( args.n_invalid > dispR.shape[1] ):
+            raise Exception("Cannot make %d columns as invalid. Image width is %d." % ( args.n_invalid, dispR.shape[1] ))
+
+        dispPFM[:, :args.n_invalid] = DISP_INVALID
+    
+    outFn = "%s/%s_i%d.pfm" % ( args.out_dir, args.out_name_disp, args.n_invalid )
+    IO.writePFM(outFn, dispPFM)
+
     # Save the disparity and sigma.
     dispFn = args.out_dir + "/" + args.out_name_disp + ".npy"
     np.save(dispFn, dispR)
 
+    dispImgFn = args.out_dir + "/" + args.out_name_disp_img + ".png"
+    save_float_image_normalized( dispImgFn, dispR )
+
     sigFn = args.out_dir + "/" + args.out_name_sig + ".npy"
     np.save(sigFn, sigR)
+
+    sigImgFn = args.out_dir + "/" + args.out_name_sig_img + ".png"
+    save_float_image_normalized( sigImgFn, sigR )
 
     sigFigFn = args.out_dir + "/" + args.out_name_sig + ".png"
     fig = plt.figure()

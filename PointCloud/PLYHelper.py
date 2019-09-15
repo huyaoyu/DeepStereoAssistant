@@ -1,5 +1,8 @@
 from __future__ import print_function
 
+# Author
+# Yaoyu Hu <yaoyuh@andrew.cmu.edu>
+
 import copy
 import numpy as np
 from plyfile import PlyData, PlyElement
