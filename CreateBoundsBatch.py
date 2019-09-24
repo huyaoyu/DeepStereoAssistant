@@ -122,14 +122,14 @@ if __name__ == "__main__":
 
         print(dispFn)
 
+        if ( partsDisp[0] != partsSig[0] ):
+            raise Exception("i = %d, \npartsDisp[0] = %s, \npartsSig[0] = %s" % \
+                ( i, partsDisp[0], partsSig[0] ))
+
         if ( args.only_list ):
             print(outDir)
             print("==========")
             continue
-
-        if ( partsDisp[0] != partsSig[0] ):
-            raise Exception("i = %d, \npartsDisp[0] = %s, \npartsSig[0] = %s" % \
-                ( i, partsDisp[0], partsSig[0] ))
 
         # Load the input files.
         disp = np.load(dispFn).astype(np.float32)
