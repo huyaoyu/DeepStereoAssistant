@@ -177,6 +177,7 @@ if __name__ == "__main__":
         fig = plt.figure()
         plt.imshow(sigR)
         fig.savefig(sigFigFn)
+        plt.close(fig)
         
         # The lower and upper bounds.
         lowerBound = dispR - args.n_sig * sigR
@@ -204,11 +205,13 @@ if __name__ == "__main__":
         fig = plt.figure()
         plt.imshow(lowerBound)
         fig.savefig(lowerBoundFigFn)
+        plt.close(fig)
 
         upperBoundFigFn = outDir + "/" + args.out_name_upper + ".png"
         fig = plt.figure()
         plt.imshow(upperBound)
         fig.savefig(upperBoundFigFn)
+        plt.close(fig)
 
         print("==========")
 
