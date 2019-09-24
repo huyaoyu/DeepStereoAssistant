@@ -10,6 +10,9 @@ import os
 
 import IO
 
+from FindOcclusion import occ_proposal
+from Filter import guided_filter_3
+
 DISP_INVALID = -1
 
 def get_parts(fn):
@@ -67,6 +70,10 @@ if __name__ == "__main__":
         help="The search pattern of the sigma file.")
     parser.add_argument("--sub", action="store_true", default=False, \
         help="Set this flag to let the script search sub-folders recursively. The result files will also be stored in sub-folders.")
+    parser.add_argument("--occ", action="store_true", default=False, \
+        help="Create occlusion proposal at the same time.")
+    # parser.add_argument("--occ-disable-cuda", action="store_true", default=False, \
+    #     help="Disable CUDA when finding the occlusion proposal.")
     parser.add_argument("--n-sig", type=float, default=1.0, \
         help="The number of sigmas.")
     parser.add_argument("--height", type=int, \
@@ -179,6 +186,21 @@ if __name__ == "__main__":
         fig.savefig(sigFigFn)
         plt.close(fig)
         
+        # Occlusion proposal.
+        if ( ags.occ ):
+            # Find initial occlusion.
+            occ = occ_proposal(dispR)
+
+            # Filter the occlusion.
+            occ, dispR = guided_filter_3(occ, dispR)
+
+            # Save the filtered disparity and occlusion.
+            dispFn = outDir + "/" + args.out_name_disp + "_FT.npy"
+            np.save(dispFn, dispR)
+
+            occFn  = outDir + "/" + args.out_name_disp + "_Occ.npy"
+            np.save(occFn, occ)
+
         # The lower and upper bounds.
         lowerBound = dispR - args.n_sig * sigR
         upperBound = dispR + args.n_sig * sigR
