@@ -3,6 +3,7 @@ from __future__ import print_function
 import argparse
 import copy
 import cv2
+import glob
 import matplotlib.pyplot as plt
 import numpy as np
 import os
@@ -93,11 +94,11 @@ if __name__ == "__main__":
 
     # Find all the input files.
     if ( args.sub ):
-        disps = sorted( glob.glob( args.inputdir + "/**/" + args.disp, recursive=True ) )
-        sigs  = sorted( glob.glob( args.inputdir + "/**/" + args.sig,  recursive=True ) )
+        disps = sorted( glob.glob( args.input_dir + "/**/" + args.disp, recursive=True ) )
+        sigs  = sorted( glob.glob( args.input_dir + "/**/" + args.sig,  recursive=True ) )
     else:
-        disps = sorted( glob.glob( args.inputdir + "/" + args.disp, recursive=False ) )
-        sigs  = sorted( glob.glob( args.inputdir + "/" + args.sig,  recursive=False ) )
+        disps = sorted( glob.glob( args.input_dir + "/" + args.disp, recursive=False ) )
+        sigs  = sorted( glob.glob( args.input_dir + "/" + args.sig,  recursive=False ) )
 
     if ( 0 == len(disps) ):
         raise Exception("No file found with %s + %s." % ( args.inputdir, args.disp ))
