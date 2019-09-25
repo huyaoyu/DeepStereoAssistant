@@ -111,7 +111,7 @@ def k_find_occlusion(ref, occ, buffer, threshold, invalid):
 
 def occ_proposal(disp, flagCUDA=True):
     # Find occlusion.
-    if ( flagCuda ):
+    if ( flagCUDA ):
         # Create a dummy tst image.
         buffer = np.zeros_like(disp, dtype=np.int64)
         occ    = np.zeros_like(disp, dtype=np.uint8)

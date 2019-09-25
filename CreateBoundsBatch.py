@@ -187,7 +187,7 @@ if __name__ == "__main__":
         plt.close(fig)
         
         # Occlusion proposal.
-        if ( ags.occ ):
+        if ( args.occ ):
             # Find initial occlusion.
             occ = occ_proposal(dispR)
 
