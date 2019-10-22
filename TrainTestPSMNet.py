@@ -95,6 +95,9 @@ class TTPSMNet(TrainTestBase):
 
             self.model = self.frame.load_model( self.model, modelFn )
 
+        if ( self.flagCPU ):
+            self.model.set_cpu_mode()
+
         self.frame.logger.info("PSMNet has %d model parameters." % \
             ( sum( [ p.data.nelement() for p in self.model.parameters() ] ) ) )
     

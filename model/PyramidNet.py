@@ -323,13 +323,20 @@ class Hourglass(nn.Module):
         return out, pre, post
 
 class DisparityRegression(nn.Module):
-    def __init__(self, maxDisp):
+    def __init__(self, maxDisp, flagCPU=False):
         super(DisparityRegression, self).__init__()
         
-        self.disp = Variable( \
+        if ( not flagCPU ):
+            self.disp = Variable( \
+                torch.Tensor( \
+                    np.reshape( np.array( range(maxDisp) ), [1, maxDisp, 1, 1] ) \
+                            ).cuda(),\
+                    requires_grad=False )
+        else:
+            self.disp = Variable( \
             torch.Tensor( \
                 np.reshape( np.array( range(maxDisp) ), [1, maxDisp, 1, 1] ) \
-                        ).cuda(),\
+                        ),\
                 requires_grad=False )
 
     def forward(self, x):
