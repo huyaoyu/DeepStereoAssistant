@@ -543,11 +543,11 @@ class PSMNetWithUncertainty(nn.Module):
 
         for i in range( int(self.maxDisp / 4) ):
             if i > 0 :
-             cost[:, :refFeature.size()[1],  i, :, i:] = refFeature[ :, :, :, i:   ]
-             cost[:,  refFeature.size()[1]:, i, :, i:] = tgtFeature[ :, :, :,  :-i ]
+                cost[:, :refFeature.size()[1],  i, :, i:] = refFeature[ :, :, :, i:   ]
+                cost[:,  refFeature.size()[1]:, i, :, i:] = tgtFeature[ :, :, :,  :-i ]
             else:
-             cost[:, :refFeature.size()[1],  i, :, :] = refFeature
-             cost[:,  refFeature.size()[1]:, i, :, :] = tgtFeature
+                cost[:, :refFeature.size()[1],  i, :, :] = refFeature
+                cost[:,  refFeature.size()[1]:, i, :, :] = tgtFeature
 
         cost = cost.contiguous()
 
@@ -624,11 +624,11 @@ class PSMNU_Inspect(PSMNetWithUncertainty):
 
         for i in range( int(self.maxDisp / 4) ):
             if i > 0 :
-             cost[:, :refFeature.size()[1],  i, :, i:] = refFeature[ :, :, :, i:   ]
-             cost[:,  refFeature.size()[1]:, i, :, i:] = tgtFeature[ :, :, :,  :-i ]
+                cost[:, :refFeature.size()[1],  i, :, i:] = refFeature[ :, :, :, i:   ]
+                cost[:,  refFeature.size()[1]:, i, :, i:] = tgtFeature[ :, :, :,  :-i ]
             else:
-             cost[:, :refFeature.size()[1],  i, :, :] = refFeature
-             cost[:,  refFeature.size()[1]:, i, :, :] = tgtFeature
+                cost[:, :refFeature.size()[1],  i, :, :] = refFeature
+                cost[:,  refFeature.size()[1]:, i, :, :] = tgtFeature
 
         cost = cost.contiguous()
 
