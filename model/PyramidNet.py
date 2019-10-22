@@ -345,6 +345,7 @@ class PSMNet(nn.Module):
         self.maxDisp         = maxDisp
         self.inChannels      = inChannels
         self.featureChannels = featureChannels
+        self.flagCPU         = False
 
         # Feature extraction.
         self.featureExtraction = FeatureExtraction( self.inChannels, self.featureChannels )
@@ -401,6 +402,12 @@ class PSMNet(nn.Module):
             # else:
             #     raise PyramidNetException("Unexpected module type {}.".format(type(m)))
 
+    def set_cpu_mode(self):
+        self.flagCPU = True
+
+    def unset_cpu_mode(self):
+        self.flagCPU = False
+
     def forward(self, L, R):
         # Feature extraction.
 
@@ -410,15 +417,18 @@ class PSMNet(nn.Module):
         # Make new cost volume as 5D tensor.
         cost = Variable( \
             torch.FloatTensor( refFeature.size()[0], refFeature.size()[1]*2, int(self.maxDisp/4), refFeature.size()[2], refFeature.size()[3]).zero_() \
-                       ).cuda()
+                       )
+
+        if ( not self.flagCPU ):               
+            cost = cost.cuda()
 
         for i in range( int(self.maxDisp / 4) ):
             if i > 0 :
-             cost[:, :refFeature.size()[1],  i, :, i:] = refFeature[ :, :, :, i:   ]
-             cost[:,  refFeature.size()[1]:, i, :, i:] = tgtFeature[ :, :, :,  :-i ]
+                cost[:, :refFeature.size()[1],  i, :, i:] = refFeature[ :, :, :, i:   ]
+                cost[:,  refFeature.size()[1]:, i, :, i:] = tgtFeature[ :, :, :,  :-i ]
             else:
-             cost[:, :refFeature.size()[1],  i, :, :] = refFeature
-             cost[:,  refFeature.size()[1]:, i, :, :] = tgtFeature
+                cost[:, :refFeature.size()[1],  i, :, :] = refFeature
+                cost[:,  refFeature.size()[1]:, i, :, :] = tgtFeature
 
         cost = cost.contiguous()
 
@@ -471,6 +481,7 @@ class PSMNetWithUncertainty(nn.Module):
         self.maxDisp         = maxDisp
         self.inChannels      = inChannels
         self.featureChannels = featureChannels
+        self.flagCPU         = False
 
         # Feature extraction.
         self.featureExtraction = FeatureExtraction( self.inChannels, self.featureChannels )
@@ -530,6 +541,12 @@ class PSMNetWithUncertainty(nn.Module):
             # else:
             #     raise PyramidNetException("Unexpected module type {}.".format(type(m)))
 
+    def set_cpu_mode(self):
+        self.flagCPU = True
+
+    def unset_cpu_mode(self):
+        self.flagCPU = False
+
     def forward(self, L, R):
         # Feature extraction.
 
@@ -539,7 +556,10 @@ class PSMNetWithUncertainty(nn.Module):
         # Make new cost volume as 5D tensor.
         cost = Variable( \
             torch.FloatTensor( refFeature.size()[0], refFeature.size()[1]*2, int(self.maxDisp/4), refFeature.size()[2], refFeature.size()[3]).zero_() \
-                       ).cuda()
+                       )
+        
+        if ( not self.flagCPU ):
+            cost = cost.cuda()
 
         for i in range( int(self.maxDisp / 4) ):
             if i > 0 :
@@ -620,7 +640,10 @@ class PSMNU_Inspect(PSMNetWithUncertainty):
         # Make new cost volume as 5D tensor.
         cost = Variable( \
             torch.FloatTensor( refFeature.size()[0], refFeature.size()[1]*2, int(self.maxDisp/4), refFeature.size()[2], refFeature.size()[3]).zero_() \
-                       ).cuda()
+                       )
+
+        if ( not self.flagCPU ):   
+            cost = cost.cuda()
 
         for i in range( int(self.maxDisp / 4) ):
             if i > 0 :

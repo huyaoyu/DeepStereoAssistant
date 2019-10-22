@@ -457,6 +457,9 @@ class TTPSMNU(TTPSMNet):
 
             self.model = self.frame.load_model( self.model, modelFn )
 
+        if ( self.flagCPU ):
+            self.model.set_cpu_mode()
+
         # Initialize the working directory for inspection.
         if ( True == self.flagInspect ):
             self.inspector.initialize_working_dir()
