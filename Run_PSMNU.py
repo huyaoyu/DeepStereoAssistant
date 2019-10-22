@@ -211,6 +211,10 @@ if __name__ == "__main__":
 
                 wf.logger.info("Infer %d." % ( batchIdx ))
 
+                if ( tt.countTest == args.test_loops ):
+                    wf.logger.info("Infer reaches the maximum number. Maximum is %d. " % (args.test_loops))
+                    break
+
             wf.logger.info("Done inferring.")
 
         wf.finalize()
