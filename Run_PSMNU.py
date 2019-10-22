@@ -81,7 +81,7 @@ class MyWF(TorchFlow.TorchFlow):
         self.logger.info("Finalized.")
 
 if __name__ == "__main__":
-    print("Hello TyrPSMNet.")
+    print("Hello PSMNU.")
 
     # Handle the arguments.
     args = ArgumentParser.args

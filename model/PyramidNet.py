@@ -464,17 +464,17 @@ class PSMNet(nn.Module):
             cost1 = F.interpolate( cost1, [ self.maxDisp, L.size()[2], L.size()[3] ], mode="trilinear", align_corners=False )
             cost1 = torch.squeeze( cost1, 1 )
             pred1 = F.softmax( cost1, dim = 1 )
-            pred1 = DisparityRegression( self.maxDisp )( pred1 )
+            pred1 = DisparityRegression( self.maxDisp, self.flagCPU )( pred1 )
 
             cost2 = F.interpolate( cost2, [ self.maxDisp, L.size()[2], L.size()[3] ], mode="trilinear", align_corners=False )
             cost2 = torch.squeeze( cost2, 1 )
             pred2 = F.softmax( cost2, dim = 1 )
-            pred2 = DisparityRegression( self.maxDisp )( pred2 )
+            pred2 = DisparityRegression( self.maxDisp, self.flagCPU )( pred2 )
 
         cost3 = F.interpolate( cost3, [ self.maxDisp, L.size()[2], L.size()[3] ], mode="trilinear", align_corners=False )
         cost3 = torch.squeeze( cost3, 1 )
         pred3 = F.softmax( cost3, dim = 1 )
-        pred3 = DisparityRegression( self.maxDisp )( pred3 )
+        pred3 = DisparityRegression( self.maxDisp, self.flagCPU )( pred3 )
 
         if ( self.training ):
             return pred1, pred2, pred3
@@ -614,17 +614,17 @@ class PSMNetWithUncertainty(nn.Module):
             cost1 = F.interpolate( cost1, [ self.maxDisp, L.size()[2], L.size()[3] ], mode="trilinear", align_corners=False )
             cost1 = torch.squeeze( cost1, 1 )
             pred1 = F.softmax( cost1, dim = 1 )
-            pred1 = DisparityRegression( self.maxDisp )( pred1 )
+            pred1 = DisparityRegression( self.maxDisp, self.flagCPU )( pred1 )
 
             cost2 = F.interpolate( cost2, [ self.maxDisp, L.size()[2], L.size()[3] ], mode="trilinear", align_corners=False )
             cost2 = torch.squeeze( cost2, 1 )
             pred2 = F.softmax( cost2, dim = 1 )
-            pred2 = DisparityRegression( self.maxDisp )( pred2 )
+            pred2 = DisparityRegression( self.maxDisp, self.flagCPU )( pred2 )
 
         cost3 = F.interpolate( cost3, [ self.maxDisp, L.size()[2], L.size()[3] ], mode="trilinear", align_corners=False )
         cost3 = torch.squeeze( cost3, 1 )
         pred3 = F.softmax( cost3, dim = 1 )
-        pred3 = DisparityRegression( self.maxDisp )( pred3 )
+        pred3 = DisparityRegression( self.maxDisp, self.flagCPU )( pred3 )
 
         if ( self.training ):
             return pred1, pred2, pred3, logSigmaSquredOverD
@@ -706,18 +706,18 @@ class PSMNU_Inspect(PSMNetWithUncertainty):
             cost1 = F.interpolate( cost1, [ self.maxDisp, L.size()[2], L.size()[3] ], mode="trilinear", align_corners=False )
             cost1 = torch.squeeze( cost1, 1 )
             pred1 = F.softmax( cost1, dim = 1 )
-            pred1 = DisparityRegression( self.maxDisp )( pred1 )
+            pred1 = DisparityRegression( self.maxDisp, self.flagCPU )( pred1 )
 
             cost2 = F.interpolate( cost2, [ self.maxDisp, L.size()[2], L.size()[3] ], mode="trilinear", align_corners=False )
             cost2 = torch.squeeze( cost2, 1 )
             pred2 = F.softmax( cost2, dim = 1 )
-            pred2 = DisparityRegression( self.maxDisp )( pred2 )
+            pred2 = DisparityRegression( self.maxDisp, self.flagCPU )( pred2 )
 
         cost3 = F.interpolate( cost3, [ self.maxDisp, L.size()[2], L.size()[3] ], mode="trilinear", align_corners=False )
         cost3 = torch.squeeze( cost3, 1 )
         pred3 = F.softmax( cost3, dim = 1 )
         inspector.save_tensor_as_images(pred3, prefix+"pd3.")
-        pred3 = DisparityRegression( self.maxDisp )( pred3 )
+        pred3 = DisparityRegression( self.maxDisp, self.flagCPU )( pred3 )
 
         if ( self.training ):
             return pred1, pred2, pred3, logSigmaSquredOverD
