@@ -22,6 +22,9 @@ parser.add_argument("--suffix", type=str, default="", \
 parser.add_argument("--multi-gpus", action="store_true", default=False, \
     help="Use multiple GPUs.")
 
+parser.add_argument("--cpu", action="store_true", default=False, \
+    help="Set this flag to use cpu only. This will overwrite --multi-gpus flag.")
+
 parser.add_argument("--lr", type=float, default=0.0001, \
     help="Learning rate.")
 

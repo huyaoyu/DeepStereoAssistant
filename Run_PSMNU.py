@@ -103,6 +103,9 @@ if __name__ == "__main__":
 
         if ( True == args.multi_gpus ):
             tt.enable_multi_GPUs()
+        
+        if ( True == args.cpu ):
+            tt.set_cpu_mode()
 
         if ( True == args.sobel_x ):
             tt.enable_Sobel_x()
