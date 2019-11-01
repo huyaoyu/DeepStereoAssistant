@@ -76,9 +76,9 @@ if __name__ == "__main__":
     #     help="Disable CUDA when finding the occlusion proposal.")
     parser.add_argument("--n-sig", type=float, default=1.0, \
         help="The number of sigmas.")
-    parser.add_argument("--height", type=int, \
+    parser.add_argument("--height", type=int, default=0, \
         help="The height of the output image.")
-    parser.add_argument("--width", type=int, \
+    parser.add_argument("--width", type=int, default=0, \
         help="The the width of the output image.")
     parser.add_argument("--out-name-lower", type=str, default="LowerBound", \
         help="The base file name of the lower bound file.")
@@ -143,15 +143,19 @@ if __name__ == "__main__":
         sig  = np.load(sigFn).astype(np.float32)
 
         # Resize the files.
-        dispR = cv2.resize( disp, ( args.width, args.height ), interpolation=cv2.INTER_LINEAR )
-        sigR  = cv2.resize( sig,  ( args.width, args.height ), interpolation=cv2.INTER_LINEAR )
+        if ( args.width > 0 and args.height > 0 ):
+            dispR = cv2.resize( disp, ( args.width, args.height ), interpolation=cv2.INTER_LINEAR )
+            sigR  = cv2.resize( sig,  ( args.width, args.height ), interpolation=cv2.INTER_LINEAR )
 
-        # The width resizing factor.
-        f = args.width / disp.shape[1]
-        print("f = %f." % (f))
+            # The width resizing factor.
+            f = args.width / disp.shape[1]
+            print("f = %f." % (f))
 
-        dispR = dispR * f
-        sigR  = sigR  * f
+            dispR = dispR * f
+            sigR  = sigR  * f
+        else:
+            dispR = copy.deepcopy(disp)
+            sigR  = copy.deepcopy(sig)
 
         # Show some information about the sigma.
         print("sigma: (%f, %f)." % ( sigR.min(), sigR.max() ))
