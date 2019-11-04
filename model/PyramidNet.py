@@ -723,3 +723,234 @@ class PSMNU_Inspect(PSMNetWithUncertainty):
             return pred1, pred2, pred3, logSigmaSquredOverD
         else:
             return pred3, logSigmaSquredOverD
+
+# ================ Light weight version. ======================
+
+class FeatureExtractionLightWeight(nn.Module):
+    def __init__(self, inChannels, outChannels):
+        super(FeatureExtraction, self).__init__()
+
+        self.inChannels  = inChannels
+        self.outChannels = outChannels
+
+        self.postConvIntermediateChannels = 128
+
+        # The nns.
+        # Pre-process convolutions.
+        self.preConv = nn.Sequential( \
+            CB2D( self.inChannels, self.outChannels, 3, 2, 1, 1 ), \
+            nn.ReLU( inplace=True ), \
+            CB2D( self.outChannels, self.outChannels, 3, 1, 1, 1 ), \
+            nn.ReLU( inplace=True ), \
+            CB2D( self.outChannels, self.outChannels, 3, 1, 1, 1 ), \
+            nn.ReLU( inplace=True ) )
+        
+        # Feature extraction layers.
+        # self.fe1 = FeatureExtractionLayer( LayerBlock,   self.outChannels,   self.outChannels,  3, 1, 1, 1 )
+        # self.fe2 = FeatureExtractionLayer( LayerBlock,   self.outChannels, 2*self.outChannels, 16, 2, 1, 1 )
+        # self.fe3 = FeatureExtractionLayer( LayerBlock, 2*self.outChannels, 4*self.outChannels,  3, 1, 1, 1 )
+        # self.fe4 = FeatureExtractionLayer( LayerBlock, 4*self.outChannels, 4*self.outChannels,  3, 1, 1, 2 )
+        self.fe1 = FeatureExtractionLayer( LayerBlock,   self.outChannels,   self.outChannels,  3, 1, 1, 1 )
+        self.fe2 = FeatureExtractionLayer( LayerBlock,   self.outChannels, 2*self.outChannels,  3, 2, 1, 1 )
+        self.fe3 = FeatureExtractionLayer( LayerBlock, 2*self.outChannels, 2*self.outChannels,  3, 1, 1, 1 )
+        self.fe4 = FeatureExtractionLayer( LayerBlock, 2*self.outChannels, 2*self.outChannels,  3, 1, 1, 2 )
+
+        # SPP.
+        # self.SPP1 = SPPBranch( 4*self.outChannels, self.outChannels, 64 )
+        # self.SPP2 = SPPBranch( 4*self.outChannels, self.outChannels, 32 )
+        # self.SPP3 = SPPBranch( 4*self.outChannels, self.outChannels, 16 )
+        # self.SPP4 = SPPBranch( 4*self.outChannels, self.outChannels,  8 )
+
+        self.SPP1 = SPPBranch( 2*self.outChannels, self.outChannels, 64 )
+        self.SPP2 = SPPBranch( 2*self.outChannels, self.outChannels, 32 )
+        self.SPP3 = SPPBranch( 2*self.outChannels, self.outChannels, 16 )
+        self.SPP4 = SPPBranch( 2*self.outChannels, self.outChannels,  8 )
+
+        # Post-process convolutions.
+        self.postConv = nn.Sequential( \
+            CB2D( 2*self.outChannels + 2*self.outChannels + self.outChannels * 4, self.postConvIntermediateChannels, 3, 1, 1, 1 ), \
+            nn.ReLU( inplace=True ),
+            nn.Conv2d( self.postConvIntermediateChannels, self.outChannels, kernel_size=1, stride=1, padding=0, dilation=1, bias=False ) )
+
+    def forward(self, x):
+        # Pre-process convolutions.
+        output = self.preConv(x)
+
+        # Feature extraction.
+        output     = self.fe1(output)
+        outputRaw  = self.fe2(output)
+        output     = self.fe3(outputRaw)
+        outputSkip = self.fe4(output)
+
+        # SPP.
+        outputSPP1 = self.SPP1(outputSkip)
+        outputSPP1 = F.interpolate( outputSPP1, ( outputSkip.size()[2], outputSkip.size()[3] ), mode="bilinear", align_corners=False )
+        outputSPP2 = self.SPP1(outputSkip)
+        outputSPP2 = F.interpolate( outputSPP2, ( outputSkip.size()[2], outputSkip.size()[3] ), mode="bilinear", align_corners=False )
+        outputSPP3 = self.SPP1(outputSkip)
+        outputSPP3 = F.interpolate( outputSPP3, ( outputSkip.size()[2], outputSkip.size()[3] ), mode="bilinear", align_corners=False )
+        outputSPP4 = self.SPP1(outputSkip)
+        outputSPP4 = F.interpolate( outputSPP4, ( outputSkip.size()[2], outputSkip.size()[3] ), mode="bilinear", align_corners=False )
+
+        # Concat the extracted features.
+        output = torch.cat( ( outputRaw, outputSkip, outputSPP4, outputSPP3, outputSPP2, outputSPP1 ), 1 )
+
+        # Post-process convolutions.
+        output = self.postConv( output )
+
+        return output
+
+class PSMNULightWeight(nn.Module):
+    def __init__(self, inChannels, featureChannels, maxDisp):
+        super(PSMNetWithUncertainty, self).__init__()
+
+        self.maxDisp         = maxDisp
+        self.inChannels      = inChannels
+        self.featureChannels = featureChannels
+        self.flagCPU         = False
+
+        # Feature extraction.
+        # self.featureExtraction = FeatureExtraction( self.inChannels, self.featureChannels )
+        self.featureExtraction = FeatureExtractionLightWeight( self.inChannels, self.featureChannels )
+
+        # Prepare for hourglass layers.
+        self.ph1 = nn.Sequential( \
+            CB3D( 2*self.featureChannels, self.featureChannels, 3, 1, 1 ), \
+            nn.ReLU( inplace=True ), \
+            CB3D( self.featureChannels, self.featureChannels, 3, 1, 1 ), \
+            nn.ReLU( inplace=True ) )
+        
+        self.ph2 = nn.Sequential( \
+            CB3D( self.featureChannels, self.featureChannels, 3, 1, 1 ), \
+            nn.ReLU( inplace=True ), \
+            CB3D( self.featureChannels, self.featureChannels, 3, 1, 1 ) )
+        
+        # Hourglass layers.
+        self.hg1 = Hourglass( self.featureChannels )
+        # self.hg2 = Hourglass( self.featureChannels )
+        self.hg3 = Hourglass( self.featureChannels )
+
+        # Classification in disparity dimension.
+        self.cd1 = nn.Sequential( \
+            CB3D( self.featureChannels, self.featureChannels, 3, 1, 1 ), \
+            nn.ReLU( inplace=True ),
+            nn.Conv3d( self.featureChannels, 1, kernel_size=3, stride=1, padding=1, dilation=1, bias=False ) )
+
+        # self.cd2 = nn.Sequential( \
+        #     CB3D( self.featureChannels, self.featureChannels, 3, 1, 1 ), \
+        #     nn.ReLU( inplace=True ),
+        #     nn.Conv3d( self.featureChannels, 1, kernel_size=3, stride=1, padding=1, dilation=1, bias=False ) )
+
+        # ===================================================================
+        # ==================== Different with PSMNet. =======================
+        # ===================================================================
+        self.cd3 = nn.Sequential( \
+            CB3D( self.featureChannels, self.featureChannels, 3, 1, 1 ), \
+            nn.ReLU( inplace=True ),
+            nn.Conv3d( self.featureChannels, 2, kernel_size=3, stride=1, padding=1, dilation=1, bias=False ) )
+
+        # Weights initialization.
+        for m in self.modules():
+            if ( isinstance( m, (nn.Conv2d) ) ):
+                n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
+                m.weight.data.normal_(0, math.sqrt( 2.0 / n ))
+            elif ( isinstance( m, (nn.Conv3d) ) ):
+                n = m.kernel_size[0] * m.kernel_size[1] * m.kernel_size[2] * m.out_channels
+                m.weight.data.normal_(0, math.sqrt( 2.0 / n ))
+            elif ( isinstance( m, (nn.BatchNorm2d) ) ):
+                m.weight.data.fill_(1)
+                m.bias.data.zero_()
+            elif ( isinstance( m, (nn.BatchNorm3d) ) ):
+                m.weight.data.fill_(1)
+                m.bias.data.zero_()
+            elif ( isinstance( m, (nn.Linear) ) ):
+                m.bias.data.zero_()
+            # else:
+            #     raise PyramidNetException("Unexpected module type {}.".format(type(m)))
+
+    def set_cpu_mode(self):
+        self.flagCPU = True
+
+    def unset_cpu_mode(self):
+        self.flagCPU = False
+
+    def forward(self, L, R):
+        # Feature extraction.
+
+        refFeature = self.featureExtraction(L)
+        tgtFeature = self.featureExtraction(R)
+
+        # Make new cost volume as 5D tensor.
+        cost = Variable( \
+            torch.FloatTensor( refFeature.size()[0], refFeature.size()[1]*2, int(self.maxDisp/4), refFeature.size()[2], refFeature.size()[3]).zero_() \
+                       )
+        
+        if ( not self.flagCPU ):
+            cost = cost.cuda()
+
+        for i in range( int(self.maxDisp / 4) ):
+            if i > 0 :
+                cost[:, :refFeature.size()[1],  i, :, i:] = refFeature[ :, :, :, i:   ]
+                cost[:,  refFeature.size()[1]:, i, :, i:] = tgtFeature[ :, :, :,  :-i ]
+            else:
+                cost[:, :refFeature.size()[1],  i, :, :] = refFeature
+                cost[:,  refFeature.size()[1]:, i, :, :] = tgtFeature
+
+        cost = cost.contiguous()
+
+        # Prepare for hourglass layers.
+        cost0 = self.ph1(cost)
+        cost0 = self.ph2(cost0) + cost0
+
+        # Hourglass layers.
+        out1, pre1, post1 = self.hg1( cost0, None, None )
+        # import ipdb; ipdb.set_trace()
+        out1 = out1 + cost0
+
+        # out2, pre2, post2 = self.hg2( out1, pre1, post1 )
+        # out2 = out2 + cost0
+
+        # out3, pre3, post3 = self.hg3( out2, pre1, post2 )
+        # out3 = out3 + cost0
+
+        out3, pre3, post3 = self.hg3( out1, pre1, post1 )
+        out3 = out3 + cost0
+
+        # Classification in the disparity dimension.
+        cost1 = self.cd1( out1 )
+        # cost2 = self.cd2( out2 ) + cost1
+
+        # ===================================================================
+        # ==================== Different with PSMNet. =======================
+        # ===================================================================
+        # cost3 = self.cd3( out3 ) + cost2
+        lastClassification = self.cd3( out3 )
+        # cost3 = lastClassification[:, 0, :, :, :] + cost2
+        cost3 = lastClassification[:, 0, :, :, :] + cost1
+        
+        logSigmaSquredOverD = lastClassification[:, 1, :, :, :]
+        logSigmaSquredOverD = F.interpolate( logSigmaSquredOverD, [ L.size()[2], L.size()[3] ], mode="bilinear", align_corners=False )
+        logSigmaSquredOverD = torch.squeeze( logSigmaSquredOverD, 1 )
+        logSigmaSquredOverD = torch.mean( logSigmaSquredOverD, 1, keepdim=False )
+
+        # Disparity regression.
+        if ( self.training ):
+            cost1 = F.interpolate( cost1, [ self.maxDisp, L.size()[2], L.size()[3] ], mode="trilinear", align_corners=False )
+            cost1 = torch.squeeze( cost1, 1 )
+            pred1 = F.softmax( cost1, dim = 1 )
+            pred1 = DisparityRegression( self.maxDisp, self.flagCPU )( pred1 )
+
+            # cost2 = F.interpolate( cost2, [ self.maxDisp, L.size()[2], L.size()[3] ], mode="trilinear", align_corners=False )
+            # cost2 = torch.squeeze( cost2, 1 )
+            # pred2 = F.softmax( cost2, dim = 1 )
+            # pred2 = DisparityRegression( self.maxDisp, self.flagCPU )( pred2 )
+
+        cost3 = F.interpolate( cost3, [ self.maxDisp, L.size()[2], L.size()[3] ], mode="trilinear", align_corners=False )
+        cost3 = torch.squeeze( cost3, 1 )
+        pred3 = F.softmax( cost3, dim = 1 )
+        pred3 = DisparityRegression( self.maxDisp, self.flagCPU )( pred3 )
+
+        if ( self.training ):
+            return pred1, pred3, logSigmaSquredOverD
+        else:
+            return pred3, logSigmaSquredOverD
