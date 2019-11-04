@@ -95,6 +95,9 @@ class TTPSMNet(TrainTestBase):
 
             self.model = self.frame.load_model( self.model, modelFn )
 
+        if ( self.flagCPU ):
+            self.model.set_cpu_mode()
+
         self.frame.logger.info("PSMNet has %d model parameters." % \
             ( sum( [ p.data.nelement() for p in self.model.parameters() ] ) ) )
     
@@ -118,9 +121,10 @@ class TTPSMNet(TrainTestBase):
         imgR = Variable( torch.FloatTensor(imgR) )
         disp = Variable( torch.FloatTensor(disp) )
 
-        imgL = imgL.cuda()
-        imgR = imgR.cuda()
-        disp = disp.cuda()
+        if ( not self.flagCPU ):
+            imgL = imgL.cuda()
+            imgR = imgR.cuda()
+            disp = disp.cuda()
 
         self.optimizer.zero_grad()
 
@@ -308,8 +312,9 @@ class TTPSMNet(TrainTestBase):
         imgL = Variable( torch.FloatTensor( imgL ) )
         imgR = Variable( torch.FloatTensor( imgR ) )
 
-        imgL = imgL.cuda()
-        imgR = imgR.cuda()
+        if ( not self.flagCPU ):
+            imgL = imgL.cuda()
+            imgR = imgR.cuda()
 
         with torch.no_grad():
             output3 = self.model( imgL, imgR )
@@ -356,8 +361,9 @@ class TTPSMNet(TrainTestBase):
         imgL = Variable( torch.FloatTensor( imgL ) )
         imgR = Variable( torch.FloatTensor( imgR ) )
 
-        imgL = imgL.cuda()
-        imgR = imgR.cuda()
+        if ( not self.flagCPU ):
+            imgL = imgL.cuda()
+            imgR = imgR.cuda()
 
         with torch.no_grad():
             output3 = self.model( imgL, imgR )
@@ -454,6 +460,9 @@ class TTPSMNU(TTPSMNet):
 
             self.model = self.frame.load_model( self.model, modelFn )
 
+        if ( self.flagCPU ):
+            self.model.set_cpu_mode()
+
         # Initialize the working directory for inspection.
         if ( True == self.flagInspect ):
             self.inspector.initialize_working_dir()
@@ -476,9 +485,10 @@ class TTPSMNU(TTPSMNet):
         imgR = Variable( torch.FloatTensor(imgR) )
         disp = Variable( torch.FloatTensor(disp) )
 
-        imgL = imgL.cuda()
-        imgR = imgR.cuda()
-        disp = disp.cuda()
+        if ( not self.flagCPU ):
+            imgL = imgL.cuda()
+            imgR = imgR.cuda()
+            disp = disp.cuda()
 
         self.optimizer.zero_grad()
 
@@ -635,9 +645,10 @@ class TTPSMNU(TTPSMNet):
         imgL = Variable( torch.FloatTensor( imgL ) )
         imgR = Variable( torch.FloatTensor( imgR ) )
 
-        imgL = imgL.cuda()
-        imgR = imgR.cuda()
-        disp = disp.cuda()
+        if ( not self.flagCPU ):
+            imgL = imgL.cuda()
+            imgR = imgR.cuda()
+            disp = disp.cuda()
 
         with torch.no_grad():
             if ( False == self.flagInspect ):
@@ -807,8 +818,9 @@ class TTPSMNU(TTPSMNet):
         imgL = Variable( torch.FloatTensor( imgL ) )
         imgR = Variable( torch.FloatTensor( imgR ) )
 
-        imgL = imgL.cuda()
-        imgR = imgR.cuda()
+        if ( not self.flagCPU ):
+            imgL = imgL.cuda()
+            imgR = imgR.cuda()
 
         with torch.no_grad():
             if ( False == self.flagInspect ):
