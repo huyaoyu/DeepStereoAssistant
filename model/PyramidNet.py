@@ -602,7 +602,7 @@ class PSMNetWithUncertainty(nn.Module):
         # ===================================================================
         # cost3 = self.cd3( out3 ) + cost2
         lastClassification = self.cd3( out3 )
-        cost3 = lastClassification[:, 0, :, :, :] + cost2
+        cost3 = lastClassification[:, 0, :, :, :].unsqueeze(1) + cost2
         
         logSigmaSquredOverD = lastClassification[:, 1, :, :, :]
         logSigmaSquredOverD = F.interpolate( logSigmaSquredOverD, [ L.size()[2], L.size()[3] ], mode="bilinear", align_corners=False )
@@ -728,7 +728,7 @@ class PSMNU_Inspect(PSMNetWithUncertainty):
 
 class FeatureExtractionLightWeight(nn.Module):
     def __init__(self, inChannels, outChannels):
-        super(FeatureExtraction, self).__init__()
+        super(FeatureExtractionLightWeight, self).__init__()
 
         self.inChannels  = inChannels
         self.outChannels = outChannels
@@ -802,7 +802,7 @@ class FeatureExtractionLightWeight(nn.Module):
 
 class PSMNULightWeight(nn.Module):
     def __init__(self, inChannels, featureChannels, maxDisp):
-        super(PSMNetWithUncertainty, self).__init__()
+        super(PSMNULightWeight, self).__init__()
 
         self.maxDisp         = maxDisp
         self.inChannels      = inChannels
@@ -926,7 +926,7 @@ class PSMNULightWeight(nn.Module):
         # cost3 = self.cd3( out3 ) + cost2
         lastClassification = self.cd3( out3 )
         # cost3 = lastClassification[:, 0, :, :, :] + cost2
-        cost3 = lastClassification[:, 0, :, :, :] + cost1
+        cost3 = lastClassification[:, 0, :, :, :].unsqueeze(1) + cost1
         
         logSigmaSquredOverD = lastClassification[:, 1, :, :, :]
         logSigmaSquredOverD = F.interpolate( logSigmaSquredOverD, [ L.size()[2], L.size()[3] ], mode="bilinear", align_corners=False )

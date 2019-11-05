@@ -15,7 +15,7 @@ from workflow import WorkFlow, TorchFlow
 from TrainTestBase import TrainTestBase
 from TrainTestPSMNet import TTPSMNet
 
-from model import PSMNULightWeight
+from model import PyramidNet
 from PointCloud.PLYHelper import write_PLY
 
 import matplotlib.pyplot as plt
@@ -32,7 +32,7 @@ Q_FLIP = np.array( [ \
 
 class TTPSMNULW(TTPSMNet):
     def __init__(self, workingDir, frame=None):
-        super(TTPSMNU, self).__init__( workingDir, frame )
+        super(TTPSMNULW, self).__init__( workingDir, frame )
 
         self.flagInspect = False # Set True to perform inspection. NOTE: High filesystem memory consumption.
         self.inspector   = None
