@@ -323,13 +323,20 @@ class Hourglass(nn.Module):
         return out, pre, post
 
 class DisparityRegression(nn.Module):
-    def __init__(self, maxDisp):
+    def __init__(self, maxDisp, flagCPU=False):
         super(DisparityRegression, self).__init__()
         
-        self.disp = Variable( \
+        if ( not flagCPU ):
+            self.disp = Variable( \
+                torch.Tensor( \
+                    np.reshape( np.array( range(maxDisp) ), [1, maxDisp, 1, 1] ) \
+                            ).cuda(),\
+                    requires_grad=False )
+        else:
+            self.disp = Variable( \
             torch.Tensor( \
                 np.reshape( np.array( range(maxDisp) ), [1, maxDisp, 1, 1] ) \
-                        ).cuda(),\
+                        ),\
                 requires_grad=False )
 
     def forward(self, x):
@@ -345,6 +352,7 @@ class PSMNet(nn.Module):
         self.maxDisp         = maxDisp
         self.inChannels      = inChannels
         self.featureChannels = featureChannels
+        self.flagCPU         = False
 
         # Feature extraction.
         self.featureExtraction = FeatureExtraction( self.inChannels, self.featureChannels )
@@ -401,6 +409,12 @@ class PSMNet(nn.Module):
             # else:
             #     raise PyramidNetException("Unexpected module type {}.".format(type(m)))
 
+    def set_cpu_mode(self):
+        self.flagCPU = True
+
+    def unset_cpu_mode(self):
+        self.flagCPU = False
+
     def forward(self, L, R):
         # Feature extraction.
 
@@ -410,15 +424,18 @@ class PSMNet(nn.Module):
         # Make new cost volume as 5D tensor.
         cost = Variable( \
             torch.FloatTensor( refFeature.size()[0], refFeature.size()[1]*2, int(self.maxDisp/4), refFeature.size()[2], refFeature.size()[3]).zero_() \
-                       ).cuda()
+                       )
+
+        if ( not self.flagCPU ):               
+            cost = cost.cuda()
 
         for i in range( int(self.maxDisp / 4) ):
             if i > 0 :
-             cost[:, :refFeature.size()[1],  i, :, i:] = refFeature[ :, :, :, i:   ]
-             cost[:,  refFeature.size()[1]:, i, :, i:] = tgtFeature[ :, :, :,  :-i ]
+                cost[:, :refFeature.size()[1],  i, :, i:] = refFeature[ :, :, :, i:   ]
+                cost[:,  refFeature.size()[1]:, i, :, i:] = tgtFeature[ :, :, :,  :-i ]
             else:
-             cost[:, :refFeature.size()[1],  i, :, :] = refFeature
-             cost[:,  refFeature.size()[1]:, i, :, :] = tgtFeature
+                cost[:, :refFeature.size()[1],  i, :, :] = refFeature
+                cost[:,  refFeature.size()[1]:, i, :, :] = tgtFeature
 
         cost = cost.contiguous()
 
@@ -447,17 +464,17 @@ class PSMNet(nn.Module):
             cost1 = F.interpolate( cost1, [ self.maxDisp, L.size()[2], L.size()[3] ], mode="trilinear", align_corners=False )
             cost1 = torch.squeeze( cost1, 1 )
             pred1 = F.softmax( cost1, dim = 1 )
-            pred1 = DisparityRegression( self.maxDisp )( pred1 )
+            pred1 = DisparityRegression( self.maxDisp, self.flagCPU )( pred1 )
 
             cost2 = F.interpolate( cost2, [ self.maxDisp, L.size()[2], L.size()[3] ], mode="trilinear", align_corners=False )
             cost2 = torch.squeeze( cost2, 1 )
             pred2 = F.softmax( cost2, dim = 1 )
-            pred2 = DisparityRegression( self.maxDisp )( pred2 )
+            pred2 = DisparityRegression( self.maxDisp, self.flagCPU )( pred2 )
 
         cost3 = F.interpolate( cost3, [ self.maxDisp, L.size()[2], L.size()[3] ], mode="trilinear", align_corners=False )
         cost3 = torch.squeeze( cost3, 1 )
         pred3 = F.softmax( cost3, dim = 1 )
-        pred3 = DisparityRegression( self.maxDisp )( pred3 )
+        pred3 = DisparityRegression( self.maxDisp, self.flagCPU )( pred3 )
 
         if ( self.training ):
             return pred1, pred2, pred3
@@ -471,6 +488,7 @@ class PSMNetWithUncertainty(nn.Module):
         self.maxDisp         = maxDisp
         self.inChannels      = inChannels
         self.featureChannels = featureChannels
+        self.flagCPU         = False
 
         # Feature extraction.
         self.featureExtraction = FeatureExtraction( self.inChannels, self.featureChannels )
@@ -530,6 +548,12 @@ class PSMNetWithUncertainty(nn.Module):
             # else:
             #     raise PyramidNetException("Unexpected module type {}.".format(type(m)))
 
+    def set_cpu_mode(self):
+        self.flagCPU = True
+
+    def unset_cpu_mode(self):
+        self.flagCPU = False
+
     def forward(self, L, R):
         # Feature extraction.
 
@@ -539,15 +563,18 @@ class PSMNetWithUncertainty(nn.Module):
         # Make new cost volume as 5D tensor.
         cost = Variable( \
             torch.FloatTensor( refFeature.size()[0], refFeature.size()[1]*2, int(self.maxDisp/4), refFeature.size()[2], refFeature.size()[3]).zero_() \
-                       ).cuda()
+                       )
+        
+        if ( not self.flagCPU ):
+            cost = cost.cuda()
 
         for i in range( int(self.maxDisp / 4) ):
             if i > 0 :
-             cost[:, :refFeature.size()[1],  i, :, i:] = refFeature[ :, :, :, i:   ]
-             cost[:,  refFeature.size()[1]:, i, :, i:] = tgtFeature[ :, :, :,  :-i ]
+                cost[:, :refFeature.size()[1],  i, :, i:] = refFeature[ :, :, :, i:   ]
+                cost[:,  refFeature.size()[1]:, i, :, i:] = tgtFeature[ :, :, :,  :-i ]
             else:
-             cost[:, :refFeature.size()[1],  i, :, :] = refFeature
-             cost[:,  refFeature.size()[1]:, i, :, :] = tgtFeature
+                cost[:, :refFeature.size()[1],  i, :, :] = refFeature
+                cost[:,  refFeature.size()[1]:, i, :, :] = tgtFeature
 
         cost = cost.contiguous()
 
@@ -587,17 +614,17 @@ class PSMNetWithUncertainty(nn.Module):
             cost1 = F.interpolate( cost1, [ self.maxDisp, L.size()[2], L.size()[3] ], mode="trilinear", align_corners=False )
             cost1 = torch.squeeze( cost1, 1 )
             pred1 = F.softmax( cost1, dim = 1 )
-            pred1 = DisparityRegression( self.maxDisp )( pred1 )
+            pred1 = DisparityRegression( self.maxDisp, self.flagCPU )( pred1 )
 
             cost2 = F.interpolate( cost2, [ self.maxDisp, L.size()[2], L.size()[3] ], mode="trilinear", align_corners=False )
             cost2 = torch.squeeze( cost2, 1 )
             pred2 = F.softmax( cost2, dim = 1 )
-            pred2 = DisparityRegression( self.maxDisp )( pred2 )
+            pred2 = DisparityRegression( self.maxDisp, self.flagCPU )( pred2 )
 
         cost3 = F.interpolate( cost3, [ self.maxDisp, L.size()[2], L.size()[3] ], mode="trilinear", align_corners=False )
         cost3 = torch.squeeze( cost3, 1 )
         pred3 = F.softmax( cost3, dim = 1 )
-        pred3 = DisparityRegression( self.maxDisp )( pred3 )
+        pred3 = DisparityRegression( self.maxDisp, self.flagCPU )( pred3 )
 
         if ( self.training ):
             return pred1, pred2, pred3, logSigmaSquredOverD
@@ -620,15 +647,18 @@ class PSMNU_Inspect(PSMNetWithUncertainty):
         # Make new cost volume as 5D tensor.
         cost = Variable( \
             torch.FloatTensor( refFeature.size()[0], refFeature.size()[1]*2, int(self.maxDisp/4), refFeature.size()[2], refFeature.size()[3]).zero_() \
-                       ).cuda()
+                       )
+
+        if ( not self.flagCPU ):   
+            cost = cost.cuda()
 
         for i in range( int(self.maxDisp / 4) ):
             if i > 0 :
-             cost[:, :refFeature.size()[1],  i, :, i:] = refFeature[ :, :, :, i:   ]
-             cost[:,  refFeature.size()[1]:, i, :, i:] = tgtFeature[ :, :, :,  :-i ]
+                cost[:, :refFeature.size()[1],  i, :, i:] = refFeature[ :, :, :, i:   ]
+                cost[:,  refFeature.size()[1]:, i, :, i:] = tgtFeature[ :, :, :,  :-i ]
             else:
-             cost[:, :refFeature.size()[1],  i, :, :] = refFeature
-             cost[:,  refFeature.size()[1]:, i, :, :] = tgtFeature
+                cost[:, :refFeature.size()[1],  i, :, :] = refFeature
+                cost[:,  refFeature.size()[1]:, i, :, :] = tgtFeature
 
         cost = cost.contiguous()
 
@@ -676,18 +706,18 @@ class PSMNU_Inspect(PSMNetWithUncertainty):
             cost1 = F.interpolate( cost1, [ self.maxDisp, L.size()[2], L.size()[3] ], mode="trilinear", align_corners=False )
             cost1 = torch.squeeze( cost1, 1 )
             pred1 = F.softmax( cost1, dim = 1 )
-            pred1 = DisparityRegression( self.maxDisp )( pred1 )
+            pred1 = DisparityRegression( self.maxDisp, self.flagCPU )( pred1 )
 
             cost2 = F.interpolate( cost2, [ self.maxDisp, L.size()[2], L.size()[3] ], mode="trilinear", align_corners=False )
             cost2 = torch.squeeze( cost2, 1 )
             pred2 = F.softmax( cost2, dim = 1 )
-            pred2 = DisparityRegression( self.maxDisp )( pred2 )
+            pred2 = DisparityRegression( self.maxDisp, self.flagCPU )( pred2 )
 
         cost3 = F.interpolate( cost3, [ self.maxDisp, L.size()[2], L.size()[3] ], mode="trilinear", align_corners=False )
         cost3 = torch.squeeze( cost3, 1 )
         pred3 = F.softmax( cost3, dim = 1 )
         inspector.save_tensor_as_images(pred3, prefix+"pd3.")
-        pred3 = DisparityRegression( self.maxDisp )( pred3 )
+        pred3 = DisparityRegression( self.maxDisp, self.flagCPU )( pred3 )
 
         if ( self.training ):
             return pred1, pred2, pred3, logSigmaSquredOverD

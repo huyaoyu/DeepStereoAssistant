@@ -81,7 +81,7 @@ class MyWF(TorchFlow.TorchFlow):
         self.logger.info("Finalized.")
 
 if __name__ == "__main__":
-    print("Hello TyrPSMNet.")
+    print("Hello PSMNU.")
 
     # Handle the arguments.
     args = ArgumentParser.args
@@ -103,6 +103,9 @@ if __name__ == "__main__":
 
         if ( True == args.multi_gpus ):
             tt.enable_multi_GPUs()
+        
+        if ( True == args.cpu ):
+            tt.set_cpu_mode()
 
         if ( True == args.sobel_x ):
             tt.enable_Sobel_x()
@@ -207,6 +210,10 @@ if __name__ == "__main__":
                     wf.logger.warning("Inspection enabled")
 
                 wf.logger.info("Infer %d." % ( batchIdx ))
+
+                if ( tt.countTest == args.test_loops ):
+                    wf.logger.info("Infer reaches the maximum number. Maximum is %d. " % (args.test_loops))
+                    break
 
             wf.logger.info("Done inferring.")
 

@@ -66,6 +66,7 @@ class TrainTestBase(object):
         self.maxDisp = 0 # Real disparity, not scaled.
 
         self.model     = None
+        self.flagCPU   = False
         self.multiGPUs = False
 
         self.readModelString    = ""
@@ -139,9 +140,26 @@ class TrainTestBase(object):
     def enable_multi_GPUs(self):
         self.check_frame()
 
+        self.flagCPU   = False
         self.multiGPUs = True
 
         self.frame.logger.info("Enable multi-GPUs.")
+
+    def set_cpu_mode(self):
+        self.check_frame()
+
+        self.flagCPU   = True
+        self.multiGPUs = False
+
+        self.frame.logger.warning("CPU mode is selected.")
+
+    def unset_cpu_mode(self):
+        self.check_frame()
+
+        self.flagCPU   = False
+        self.multiGPUs = False
+
+        self.frame.logger.warning("Back to GPU mode.")
 
     def set_dataset_root_dir(self, d, nEntries=0, flagFileList=False):
         self.check_frame()
@@ -309,10 +327,11 @@ class TrainTestBase(object):
         raise Exception("init_model() virtual interface.")
 
     def post_init_model(self):
-        if ( True == self.multiGPUs ):
-            self.model = nn.DataParallel(self.model)
+        if ( not self.flagCPU ):
+            if ( True == self.multiGPUs ):
+                self.model = nn.DataParallel(self.model)
 
-        self.model.cuda()
+            self.model.cuda()
     
     def init_optimizer(self):
         raise Exception("init_optimizer() virtual interface.")
