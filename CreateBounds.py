@@ -9,7 +9,13 @@ import os
 
 import IO
 
-DISP_INVALID = -1
+# DISP_INVALID = -1
+
+def convert_invalid_value_argument(arg):
+    if ( "inf" == arg ):
+        return np.inf
+    else:
+        return float(arg.strip())
 
 def save_float_image_normalized(fn, img, lowerBound=None, upperBound=None):
     """
@@ -52,6 +58,9 @@ def save_float_image_normalized(fn, img, lowerBound=None, upperBound=None):
 def main(args):
     print(args.disp)
 
+    # Convert the invalid value argument.
+    DISP_INVALID = convert_invalid_value_argument(args.invalid_value)
+
     # Load the input files.
     disp = np.load(args.disp).astype(np.float32)
     sig  = np.load(args.sig).astype(np.float32)
@@ -82,7 +91,7 @@ def main(args):
 
         dispPFM[:, :args.n_invalid] = DISP_INVALID
     
-    outFn = "%s/%s_i%d.pfm" % ( args.out_dir, args.out_name_disp, args.n_invalid )
+    outFn = "%s/%s.pfm" % ( args.out_dir, args.out_name_disp )
     IO.writePFM(outFn, dispPFM)
 
     # Save the disparity and sigma.
@@ -164,6 +173,8 @@ if __name__ == "__main__":
         help="The base file name of the scaled sigma image.")
     parser.add_argument("--n-invalid", type=int, default=0, \
         help="Number of pixel columns to assign the 'invalid' value. Starting from the left border of the disparity map. This only affects the pfm file.")
+    parser.add_argument("--invalid-value", type=str, default="-1", \
+        help="The invalid disparity value. Use numbers. Use inf to set numpy infinity.")
     
     args = parser.parse_args()
 
