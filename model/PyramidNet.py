@@ -602,7 +602,7 @@ class PSMNetWithUncertainty(nn.Module):
         # ===================================================================
         # cost3 = self.cd3( out3 ) + cost2
         lastClassification = self.cd3( out3 )
-        cost3 = lastClassification[:, 0, :, :, :] + cost2
+        cost3 = lastClassification[:, 0, :, :, :].unsqueeze(1) + cost2
         
         logSigmaSquredOverD = lastClassification[:, 1, :, :, :]
         logSigmaSquredOverD = F.interpolate( logSigmaSquredOverD, [ L.size()[2], L.size()[3] ], mode="bilinear", align_corners=False )
@@ -692,7 +692,7 @@ class PSMNU_Inspect(PSMNetWithUncertainty):
         # ===================================================================
         # cost3 = self.cd3( out3 ) + cost2
         lastClassification = self.cd3( out3 )
-        cost3 = lastClassification[:, 0, :, :, :]
+        cost3 = lastClassification[:, 0, :, :, :].unsqueeze(1)
         inspector.save_tensor_as_images(cost3, prefix+"cd3.")
         cost3 = cost3 + cost2
         
