@@ -47,21 +47,22 @@ class TrainTestBase(object):
         self.trainIntervalAccPlot  = 1     # The interval to plot the accumulate values.
         self.flagUseIntPlotter     = False # The flag of intermittent plotter.
 
-        self.imgTrainLoader = None
-        self.imgTestLoader  = None
-        self.imgInferLoader = None
-        self.datasetRootDir = "./"
-        self.dataFileList   = False # Once set to be true, the files contain the list of input dataset will be used.
-        self.dataEntries    = 0 # 0 for using all the data.
-        self.datasetTrain   = None # Should be an object of torch.utils.data.Dataset.
-        self.datasetTest    = None # Should be an object of torch.utils.data.Dataset.
-        self.datasetInfer   = None # Should be an object of torch.utils.data.Dataset.
-        self.dlBatchSize    = 2
-        self.dlShuffle      = True
-        self.dlNumWorkers   = 2
-        self.dlDropLast     = False
-        self.dlCropTrain    = (0, 0) # (0, 0) for disable.
-        self.dlCropTest     = (0, 0) # (0, 0) for disable.
+        self.imgTrainLoader  = None
+        self.imgTestLoader   = None
+        self.imgInferLoader  = None
+        self.datasetRootDir  = "./"
+        self.dataFileList    = False # Once set to be true, the files contain the list of input dataset will be used.
+        self.dataFileListDir = None # If self.dataFileList is True, then this variable must be set properly.
+        self.dataEntries     = 0 # 0 for using all the data.
+        self.datasetTrain    = None # Should be an object of torch.utils.data.Dataset.
+        self.datasetTest     = None # Should be an object of torch.utils.data.Dataset.
+        self.datasetInfer    = None # Should be an object of torch.utils.data.Dataset.
+        self.dlBatchSize     = 2
+        self.dlShuffle       = True
+        self.dlNumWorkers    = 2
+        self.dlDropLast      = False
+        self.dlCropTrain     = (0, 0) # (0, 0) for disable.
+        self.dlCropTest      = (0, 0) # (0, 0) for disable.
 
         self.maxDisp = 0 # Real disparity, not scaled.
 
@@ -161,7 +162,7 @@ class TrainTestBase(object):
 
         self.frame.logger.warning("Back to GPU mode.")
 
-    def set_dataset_root_dir(self, d, nEntries=0, flagFileList=False):
+    def set_dataset_root_dir(self, d, nEntries=0, flagFileList=False, fileListDir=None):
         self.check_frame()
 
         if ( False == os.path.isdir(d) ):
@@ -174,10 +175,19 @@ class TrainTestBase(object):
         if ( 0 != nEntries ):
             self.frame.logger.warning("Only %d entries of the training dataset will be used." % ( nEntries ))
 
-        self.dataFileList = flagFileList
+        self.dataFileList    = flagFileList
+        self.dataFileListDir = fileListDir
+
+        if ( self.dataFileList ):
+            if ( self.dataFileListDir is None ):
+                raise Exception("The directory of the file-lists files must be set.")
+            else:
+                if ( not os.path.isdir( self.dataFileListDir ) ):
+                    raise Exception("File-lists directory %s does not exist. " % ( self.dataFileListDir ))
 
         if ( True == self.dataFileList ):
             self.frame.logger.info("Data loader will use the pre-defined files to load the input data.")
+            self.frame.logger.info("The file-lists directory is %s. " % ( self.dataFileListDir ))
 
     def set_data_loader_params(self, batchSize=2, shuffle=True, numWorkers=2, dropLast=False, \
         cropTrain=(0, 0), cropTest=(0, 0)):
@@ -255,12 +265,12 @@ class TrainTestBase(object):
 
         if ( False == self.flagInfer ):
             if ( True == self.dataFileList ):
-                imgTrainL = read_string_list( self.datasetRootDir + "/" + DATASET_LIST_TRAINING_IMG_L )
-                imgTrainR = read_string_list( self.datasetRootDir + "/" + DATASET_LIST_TRAINING_IMG_R )
-                dispTrain = read_string_list( self.datasetRootDir + "/" + DATASET_LIST_TRAINING_DSP_L )
-                imgTestL  = read_string_list( self.datasetRootDir + "/" + DATASET_LIST_TESTING_IMG_L )
-                imgTestR  = read_string_list( self.datasetRootDir + "/" + DATASET_LIST_TESTING_IMG_R )
-                dispTest  = read_string_list( self.datasetRootDir + "/" + DATASET_LIST_TESTING_DSP_L )
+                imgTrainL = read_string_list( self.dataFileListDir + "/" + DATASET_LIST_TRAINING_IMG_L, self.datasetRootDir )
+                imgTrainR = read_string_list( self.dataFileListDir + "/" + DATASET_LIST_TRAINING_IMG_R, self.datasetRootDir )
+                dispTrain = read_string_list( self.dataFileListDir + "/" + DATASET_LIST_TRAINING_DSP_L, self.datasetRootDir )
+                imgTestL  = read_string_list( self.dataFileListDir + "/" + DATASET_LIST_TESTING_IMG_L , self.datasetRootDir )
+                imgTestR  = read_string_list( self.dataFileListDir + "/" + DATASET_LIST_TESTING_IMG_R , self.datasetRootDir )
+                dispTest  = read_string_list( self.dataFileListDir + "/" + DATASET_LIST_TESTING_DSP_L , self.datasetRootDir )
             else:
                 imgTrainL, imgTrainR, dispTrain, imgTestL, imgTestR, dispTest \
                     = list_files_sceneflow_FlyingThings( self.datasetRootDir )
@@ -274,9 +284,9 @@ class TrainTestBase(object):
                 dispTest  = dispTest[0:self.dataEntries]
         else:
             if ( True == self.dataFileList ):
-                imgInferL = read_string_list( self.datasetRootDir + "/" + DATASET_LIST_INFERRING_IMG_L )
-                imgInferR = read_string_list( self.datasetRootDir + "/" + DATASET_LIST_INFERRING_IMG_R )
-                Q         = read_string_list( self.datasetRootDir + "/" + DATASET_LIST_INFERRING_Q )
+                imgInferL = read_string_list( self.dataFileListDir + "/" + DATASET_LIST_INFERRING_IMG_L, self.datasetRootDir )
+                imgInferR = read_string_list( self.dataFileListDir + "/" + DATASET_LIST_INFERRING_IMG_R, self.datasetRootDir )
+                Q         = read_string_list( self.dataFileListDir + "/" + DATASET_LIST_INFERRING_Q    , self.datasetRootDir )
             else:
                 raise Exception("Please use data file list when inferring.")
             

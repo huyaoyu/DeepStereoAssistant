@@ -7,7 +7,7 @@ from workflow import WorkFlow, TorchFlow
 
 import ArgumentParser
 
-from TrainTestPSMNet import TTPSMNU
+from TrainTestPSMNULW import TTPSMNULW
 
 def print_delimeter(c = "=", n = 20, title = "", leading = "\n", ending = "\n"):
     d = [c for i in range( int(n/2) )]
@@ -83,6 +83,8 @@ class MyWF(TorchFlow.TorchFlow):
 if __name__ == "__main__":
     print("Hello PSMNU.")
 
+    # import ipdb; ipdb.set_trace()
+
     # Handle the arguments.
     args = ArgumentParser.args
 
@@ -98,7 +100,7 @@ if __name__ == "__main__":
         wf.verbose = False
 
         # Cross reference.
-        tt = TTPSMNU(wf.workingDir, wf)
+        tt = TTPSMNULW(wf.workingDir, wf)
         wf.set_tt(tt)
 
         if ( True == args.multi_gpus ):
@@ -121,7 +123,7 @@ if __name__ == "__main__":
         tt.set_data_loader_params( \
             args.dl_batch_size, not args.dl_disable_shuffle, args.dl_num_workers, args.dl_drop_last, \
             cropTrain=cropTrain, cropTest=cropTest )
-        tt.set_dataset_root_dir( args.data_root_dir, args.data_entries, args.data_file_list, args.data_file_list_dir )
+        tt.set_dataset_root_dir( args.data_root_dir, args.data_entries, args.data_file_list )
         tt.set_read_model( args.read_model )
         tt.enable_auto_save( args.auto_save_model )
         tt.set_training_acc_params( args.train_interval_acc_write, args.train_interval_acc_plot, args.use_intermittent_plotter )

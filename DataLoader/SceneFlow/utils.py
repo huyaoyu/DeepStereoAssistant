@@ -118,7 +118,7 @@ def write_string_list_2_file(fn, s):
             temp = "%s\n" % (s[i].strip())
             fp.write(temp)
 
-def read_string_list(fn):
+def read_string_list(fn, prefix=""):
     """
     Read a file contains lines of strings. A list will be returned.
     Each element of the list contains a single entry of the input file.
@@ -133,8 +133,12 @@ def read_string_list(fn):
 
         n = len(lines)
 
-        for i in range(n):
-            lines[i] = lines[i].strip()
+        if ( "" == prefix ):
+            for i in range(n):
+                lines[i] = lines[i].strip()
+        else:
+            for i in range(n):
+                lines[i] = "%s/%s" % ( prefix, lines[i].strip() )
 
     return lines
 
