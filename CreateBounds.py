@@ -9,7 +9,13 @@ import os
 
 import IO
 
-DISP_INVALID = -1
+# DISP_INVALID = -1
+
+def convert_invalid_value_argument(arg):
+    if ( "inf" == arg ):
+        return np.inf
+    else:
+        return float(arg.strip())
 
 def save_float_image_normalized(fn, img, lowerBound=None, upperBound=None):
     """
@@ -49,39 +55,11 @@ def save_float_image_normalized(fn, img, lowerBound=None, upperBound=None):
     # Save the image.
     cv2.imwrite(fn, imgInt, [cv2.IMWRITE_PNG_COMPRESSION, 0])
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Create the lower and upper bounds file.")
-
-    parser.add_argument("--disp", type=str, \
-        help="The disparity file.")
-    parser.add_argument("--sig", type=str, \
-        help="The sigma file.")
-    parser.add_argument("--n-sig", type=float, default=1.0, \
-        help="The number of sigmas.")
-    parser.add_argument("--height", type=int, \
-        help="The height of the output image.")
-    parser.add_argument("--width", type=int, \
-        help="The the width of the output image.")
-    parser.add_argument("--out-dir", type=str, default="./", \
-        help="The output directory.")
-    parser.add_argument("--out-name-lower", type=str, default="LowerBound", \
-        help="The base file name of the lower bound file.")
-    parser.add_argument("--out-name-upper", type=str, default="UpperBound", \
-        help="The base file name of the upper bound file.")
-    parser.add_argument("--out-name-disp", type=str, default="Disparity", \
-        help="The base file name of the scaled disparity file.")
-    parser.add_argument("--out-name-sig", type=str, default="Sigma", \
-        help="The base file name of the scaled sigma file.")
-    parser.add_argument("--out-name-disp-img", type=str, default="Disparity", \
-        help="The base file name of the disparity image.")
-    parser.add_argument("--out-name-sig-img", type=str, default="SigmaGray", \
-        help="The base file name of the scaled sigma image.")
-    parser.add_argument("--n-invalid", type=int, default=0, \
-        help="Number of pixel columns to assign the 'invalid' value. Starting from the left border of the disparity map. This only affects the pfm file.")
-    
-    args = parser.parse_args()
-
+def main(args):
     print(args.disp)
+
+    # Convert the invalid value argument.
+    DISP_INVALID = convert_invalid_value_argument(args.invalid_value)
 
     # Load the input files.
     disp = np.load(args.disp).astype(np.float32)
@@ -113,7 +91,7 @@ if __name__ == "__main__":
 
         dispPFM[:, :args.n_invalid] = DISP_INVALID
     
-    outFn = "%s/%s_i%d.pfm" % ( args.out_dir, args.out_name_disp, args.n_invalid )
+    outFn = "%s/%s.pfm" % ( args.out_dir, args.out_name_disp )
     IO.writePFM(outFn, dispPFM)
 
     # Save the disparity and sigma.
@@ -165,5 +143,41 @@ if __name__ == "__main__":
     fig = plt.figure()
     plt.imshow(upperBound)
     fig.savefig(upperBoundFigFn)
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Create the lower and upper bounds file.")
+
+    parser.add_argument("--disp", type=str, \
+        help="The disparity file.")
+    parser.add_argument("--sig", type=str, \
+        help="The sigma file.")
+    parser.add_argument("--n-sig", type=float, default=1.0, \
+        help="The number of sigmas.")
+    parser.add_argument("--height", type=int, \
+        help="The height of the output image.")
+    parser.add_argument("--width", type=int, \
+        help="The the width of the output image.")
+    parser.add_argument("--out-dir", type=str, default="./", \
+        help="The output directory.")
+    parser.add_argument("--out-name-lower", type=str, default="LowerBound", \
+        help="The base file name of the lower bound file.")
+    parser.add_argument("--out-name-upper", type=str, default="UpperBound", \
+        help="The base file name of the upper bound file.")
+    parser.add_argument("--out-name-disp", type=str, default="Disparity", \
+        help="The base file name of the scaled disparity file.")
+    parser.add_argument("--out-name-sig", type=str, default="Sigma", \
+        help="The base file name of the scaled sigma file.")
+    parser.add_argument("--out-name-disp-img", type=str, default="Disparity", \
+        help="The base file name of the disparity image.")
+    parser.add_argument("--out-name-sig-img", type=str, default="SigmaGray", \
+        help="The base file name of the scaled sigma image.")
+    parser.add_argument("--n-invalid", type=int, default=0, \
+        help="Number of pixel columns to assign the 'invalid' value. Starting from the left border of the disparity map. This only affects the pfm file.")
+    parser.add_argument("--invalid-value", type=str, default="-1", \
+        help="The invalid disparity value. Use numbers. Use inf to set numpy infinity.")
+    
+    args = parser.parse_args()
+
+    main(args)
 
     print("Done.")
