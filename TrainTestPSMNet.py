@@ -702,7 +702,7 @@ class TTPSMNU(TTPSMNet):
             count = self.countTrain
 
         # Draw and save results.
-        identifier = "test_%d" % (count - 1)
+        identifier = "test_%04d" % (count - 1)
         self.draw_test_results( identifier, output, disp, imgL, imgR, logSigSqu, flagSaveDisp )
 
         # Test the existance of an AccumulatedValue object.
@@ -874,6 +874,6 @@ class TTPSMNU(TTPSMNet):
             Q = None
 
         # Draw and save results.
-        identifier = "infer_%d" % (self.countTest - 1)
+        identifier = "infer_%04d" % (self.countTest - 1)
         self.draw_infer_results( identifier, output, imgL, imgR, logSigSqu, Q, flagSaveDisp )
         
