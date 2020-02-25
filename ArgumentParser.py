@@ -61,6 +61,9 @@ parser.add_argument("--data-root-dir", type=str, default="./Data", \
 parser.add_argument("--data-file-list", action="store_true", default=False, \
     help="Use the pre-defined image and disparity list files.")
 
+parser.add_argument("--data-file-list-dir", type=str, default="./Data", \
+    help="When the --data-file-list flag is set. Use this argument to specify the directory for the file-lists files.")
+
 parser.add_argument("--data-entries", type=int, default=0, \
     help="Only use the first several entries of the dataset. This is for debug use. Set 0 for using all the data.")
 
