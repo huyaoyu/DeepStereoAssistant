@@ -37,13 +37,39 @@ def default_loader(path):
 def cv2_loader(path):
     return cv2.imread(path, cv2.IMREAD_UNCHANGED)
 
-def disparity_loader(path):
-    return IO.readPFM(path)
+def disparity_loader_png_kitti(path):
+    # Open the png file.
+    dispPNG = cv2.imread(path, cv2.IMREAD_UNCHANGED)
+
+    # Convert the disparity map.
+    dispPNG = dispPNG.astype(np.float32) / 256.0
+
+    return dispPNG
+
+def disparity_loader(path, dispType=None):
+    """
+    dispType: pfm, png-kitti
+    Returns the disparity map and the scale.
+    """
+
+    if ( dispType is None ):
+        dispType = "pfm"
+
+    assert ( dispType == "pfm" or dispType == "png-kitti" ), "Only supports disparity type of pfm and png-kitti. Got {}. ".format(dispType)
+
+    if ( "pfm" == dispType ):
+        return IO.readPFM(path)
+    elif ( "png-kitti" == dispType ):
+        disp = disparity_loader_png_kitti(path)
+        return disp, 1.0
+    else:
+        # Not possible.
+        raise Exception("Only supports disparity type of pfm and png-kitti. Got {}. ".format(dispType))
 
 class myImageFolder(data.Dataset):
     def __init__(self, left, right, left_disparity, training, \
         loader=cv2_loader, dploader= disparity_loader, preprocessor=None, \
-        cropSize=(0,0)):
+        newSize=(0,0), cropSize=(0,0)):
  
         self.left = left
         self.right = right
@@ -54,18 +80,56 @@ class myImageFolder(data.Dataset):
 
         # Modified.
         self.preprocessor  = preprocessor
+        self.newSize  = newSize
         self.cropSize = cropSize
 
+    def separate_disp_type(self, line, delimiter=",", default="pfm"):
+        d = line.split(delimiter)
+
+        ss = [ s.strip() for s in d ]
+
+        n = len(ss)
+
+        if (1 == n):
+            ss = [ *ss, default ]
+        elif( 2 == n ):
+            if ( "" == ss[1] ):
+                ss[1] = default
+        else:
+            raise Exception("Wrong line = {}".format(line))
+        
+        return ss
+
+    def resize_data(self, img0, img1, disp0, newSize):
+        """
+        newSize is in order of h-w.
+        """
+
+        h, w = newSize
+
+        img0 = cv2.resize(img0, (w,h), interpolation=cv2.INTER_LINEAR)
+        img1 = cv2.resize(img1, (w,h), interpolation=cv2.INTER_LINEAR)
+
+        wOri = disp0.shape[1]
+        f = 1.0*w/wOri
+        disp0 = cv2.resize(disp0, (w,h), interpolation=cv2.INTER_NEAREST) * f
+
+        return img0, img1, disp0
+
     def __getitem__(self, index):
-        left  = self.left[index]
-        right = self.right[index]
-        disp_L= self.disp_L[index]
+        left   = self.left[index]
+        right  = self.right[index]
+        disp_L = self.separate_disp_type( self.disp_L[index] )
 
         left_img = self.loader(left)
         # import ipdb; ipdb.set_trace()
         right_img = self.loader(right)
-        dataL, scaleL = self.dploader(disp_L)
+        dataL, scaleL = self.dploader(disp_L[0], disp_L[1])
         dataL = np.ascontiguousarray(dataL, dtype=np.float32)
+
+        if ( self.newSize[0] > 0 and self.newSize[1] > 0 ):
+            left_img, right_img, dataL = \
+                self.resize_data(left_img, right_img, dataL, self.newSize)
 
         if self.training:  
             # w, h = left_img.size
@@ -128,6 +192,8 @@ class myImageFolder(data.Dataset):
                 left_img  = self.preprocessor(left_img)
                 right_img = self.preprocessor(right_img)
 
+            dataL = dataL[ h-ch:h, w-cw:w ]
+
             return left_img, right_img, dataL
 
     def __len__(self):
@@ -136,7 +202,7 @@ class myImageFolder(data.Dataset):
 class inferImageFolder(data.Dataset):
     def __init__(self, left, right, Q, \
         loader=cv2_loader, preprocessor=None, \
-        cropSize=(0,0)):
+        newSize=(0,0), cropSize=(0,0)):
  
         self.left   = left
         self.right  = right
@@ -145,7 +211,20 @@ class inferImageFolder(data.Dataset):
 
         # Modified.
         self.preprocessor  = preprocessor
+        self.newSize       = newSize
         self.cropSize      = cropSize
+
+    def resize_data(self, img0, img1, newSize):
+        """
+        newSize is in order of h-w.
+        """
+
+        h, w = newSize
+
+        img0 = cv2.resize(img0, (w,h), interpolation=cv2.INTER_LINEAR)
+        img1 = cv2.resize(img1, (w,h), interpolation=cv2.INTER_LINEAR)
+
+        return img0, img1
 
     def __getitem__(self, index):
         left  = self.left[index]
@@ -153,6 +232,9 @@ class inferImageFolder(data.Dataset):
 
         left_img = self.loader(left)
         right_img = self.loader(right)
+
+        if ( self.newSize[0] > 0 and self.newSize[1] > 0 ):
+            left_img, right_img = self.resize_data(left_img, right_img, self.newSize)
 
         # w, h = left_img.size
 

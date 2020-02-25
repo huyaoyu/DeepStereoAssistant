@@ -121,7 +121,12 @@ class SingleChannel(object):
 
 class GrayscaleNoTensor(object):
     def __call__(self, x):
-        return cv2.cvtColor( x, cv2.COLOR_BGR2GRAY )
+        if ( 3 == len(x.shape) ):
+            return cv2.cvtColor( x, cv2.COLOR_BGR2GRAY )
+        elif ( 2 == len(x.shape) ):
+            return x
+        else:
+            raise Exception("Wrong shape of image. Could not convert to grayscale. x.shape = {}. ".format(x.shape))
 
 class SobelXNoTensor(object):
     def __call__(self, x):

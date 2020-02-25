@@ -61,6 +61,7 @@ class TrainTestBase(object):
         self.dlShuffle       = True
         self.dlNumWorkers    = 2
         self.dlDropLast      = False
+        self.dlNewSize        = (0, 0) # (0, 0) for disable.
         self.dlCropTrain     = (0, 0) # (0, 0) for disable.
         self.dlCropTest      = (0, 0) # (0, 0) for disable.
 
@@ -190,7 +191,7 @@ class TrainTestBase(object):
             self.frame.logger.info("The file-lists directory is %s. " % ( self.dataFileListDir ))
 
     def set_data_loader_params(self, batchSize=2, shuffle=True, numWorkers=2, dropLast=False, \
-        cropTrain=(0, 0), cropTest=(0, 0)):
+        newSize=(0, 0), cropTrain=(0, 0), cropTest=(0, 0)):
         
         self.check_frame()
 
@@ -198,6 +199,7 @@ class TrainTestBase(object):
         self.dlShuffle    = shuffle
         self.dlNumWorkers = numWorkers
         self.dlDropLast   = dropLast
+        self.dlNewSize     = newSize
         self.dlCropTrain  = cropTrain
         self.dlCropTest   = cropTest
 
@@ -316,8 +318,8 @@ class TrainTestBase(object):
             preprocessor = PreProcess.get_transform(augment=False)
 
         if ( False == self.flagInfer ):
-            self.datasetTrain = DA.myImageFolder( imgTrainL, imgTrainR, dispTrain, True, preprocessor=preprocessor, cropSize=self.dlCropTrain )
-            self.datasetTest  = DA.myImageFolder( imgTestL,  imgTestR,  dispTest, False, preprocessor=preprocessor, cropSize=self.dlCropTest )
+            self.datasetTrain = DA.myImageFolder( imgTrainL, imgTrainR, dispTrain, True, preprocessor=preprocessor, newSize=self.dlNewSize, cropSize=self.dlCropTrain )
+            self.datasetTest  = DA.myImageFolder( imgTestL,  imgTestR,  dispTest, False, preprocessor=preprocessor, newSize=self.dlNewSize, cropSize=self.dlCropTest )
 
             self.imgTrainLoader = torch.utils.data.DataLoader( \
                 self.datasetTrain, \
@@ -327,7 +329,7 @@ class TrainTestBase(object):
                 self.datasetTest, \
                 batch_size=1, shuffle=False, num_workers=self.dlNumWorkers, drop_last=self.dlDropLast )
         else:
-            self.datasetInfer = DA.inferImageFolder( imgInferL,  imgInferR, Q, preprocessor=preprocessor, cropSize=self.dlCropTest )
+            self.datasetInfer = DA.inferImageFolder( imgInferL,  imgInferR, Q, preprocessor=preprocessor, newSize=self.dlNewSize, cropSize=self.dlCropTest )
 
             self.imgInferLoader = torch.utils.data.DataLoader( \
                 self.datasetInfer, \

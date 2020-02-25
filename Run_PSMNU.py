@@ -57,12 +57,12 @@ class MyWF(TorchFlow.TorchFlow):
         return self.tt.train(imgL, imgR, disp, epochCount)
         
     # Overload the function test().
-    def test(self, imgL, imgR, disp, epochCount):
+    def test(self, imgL, imgR, disp, epochCount, flagSaveDisp):
         super(MyWF, self).test()
 
         self.check_tt()
 
-        return self.tt.test(imgL, imgR, disp, epochCount)
+        return self.tt.test(imgL, imgR, disp, epochCount, flagSaveDisp)
 
     def infer(self, imgL, imgR, Q):
 
@@ -87,6 +87,7 @@ if __name__ == "__main__":
     args = ArgumentParser.args
 
     # Handle the crop settings.
+    newSize   = ArgumentParser.convert_str_2_int_list( args.dl_resize )
     cropTrain = ArgumentParser.convert_str_2_int_list( args.dl_crop_train )
     cropTest  = ArgumentParser.convert_str_2_int_list( args.dl_crop_test )
 
@@ -120,7 +121,7 @@ if __name__ == "__main__":
         tt.set_max_disparity( args.max_disparity )
         tt.set_data_loader_params( \
             args.dl_batch_size, not args.dl_disable_shuffle, args.dl_num_workers, args.dl_drop_last, \
-            cropTrain=cropTrain, cropTest=cropTest )
+            newSize=newSize, cropTrain=cropTrain, cropTest=cropTest )
         tt.set_dataset_root_dir( args.data_root_dir, args.data_entries, args.data_file_list, args.data_file_list_dir )
         tt.set_read_model( args.read_model )
         tt.enable_auto_save( args.auto_save_model )
@@ -179,7 +180,7 @@ if __name__ == "__main__":
                                     testImgL, testImgR, testDisp = next( iterTestData )
 
                                 # Perform test.
-                                wf.test( testImgL, testImgR, testDisp, i )
+                                wf.test( testImgL, testImgR, testDisp, i, args.test_save_disp )
             else:
                 wf.logger.info("Begin testing.")
                 print_delimeter(title="Testing loops.")
@@ -187,7 +188,7 @@ if __name__ == "__main__":
                 totalLoss = 0
 
                 for batchIdx, ( imgL, imgR, disp ) in enumerate( tt.imgTestLoader ):
-                    loss = wf.test( imgL, imgR, disp, 0 )
+                    loss = wf.test( imgL, imgR, disp, batchIdx, args.test_save_disp )
 
                     if ( True == tt.flagInspect ):
                         wf.logger.warning("Inspection enabled.")
@@ -195,7 +196,11 @@ if __name__ == "__main__":
                     wf.logger.info("Test %d, loss = %f." % ( batchIdx, loss ))
                     totalLoss += loss
 
-                wf.logger.info("Average loss = %f." % ( totalLoss / nTests ))
+                    if ( args.test ):
+                        if ( args.test_loops != 0 and batchIdx == args.test_loops - 1 ):
+                            break
+
+                wf.logger.info("Average loss = %f." % ( totalLoss / (batchIdx+1) ))
         else:
             wf.logger.info("Begin inferring.")
             print_delimeter(title="Inferring loops.")

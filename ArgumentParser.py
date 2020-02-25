@@ -46,11 +46,14 @@ parser.add_argument("--dl-disable-shuffle", action="store_true", default=False, 
 parser.add_argument("--dl-num-workers", type=int, default=2, \
     help="The number of workers of the dataloader.")
 
+parser.add_argument("--dl-resize", type=str, default="0, 0", \
+    help="The new h, w. Set \"0, 0\" to disable.")
+
 parser.add_argument("--dl-crop-train", type=str, default="0, 0", \
-    help="The the h-crop and w-crop size during training. \"0, 0\" for disable.")
+    help="The the h-crop and w-crop size during training. Set \"0, 0\" to disable.")
 
 parser.add_argument("--dl-crop-test", type=str, default="0, 0", \
-    help="The the h-crop and w-crop size during testing. \"0, 0\" for disable")
+    help="The the h-crop and w-crop size during testing. Set \"0, 0\" to disable")
 
 parser.add_argument("--dl-drop-last", action="store_true", default=False, \
     help="The drop-last switch of the dataloader.")
@@ -74,7 +77,10 @@ parser.add_argument("--test", action="store_true", default=False, \
     help="Only perform test. Make sure to specify --read-model")
 
 parser.add_argument("--test-loops", type=int, default=0, \
-    help="The number of training loops between a test. Set 0 for not testing.")
+    help="The number of training loops between a test. Set 0 for not testing. When perform batch testing, this argument controls the number of test cases.")
+
+parser.add_argument("--test-save-disp", action="store_true", default=False, \
+    help="Set this flag to save the disparity when doing a test.")
 
 parser.add_argument("--infer", action="store_true", default=False, \
     help="Enable the infer mode.")
