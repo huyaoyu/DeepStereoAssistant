@@ -558,6 +558,9 @@ class TTPSMNU(TTPSMNet):
         logSigSqu: Dimension (B, H, W).
         """
 
+        dispID = "%s_disp" % ( identifier )
+        sigID  = "%s_sig" % ( identifier )
+
         batchSize = predD.size()[0]
         
         for i in range(batchSize):
@@ -565,7 +568,7 @@ class TTPSMNU(TTPSMNet):
             gdtDisp = trueD[i, :, :].detach().cpu().numpy()
 
             if ( flagSaveDisp ):
-                dispFn = "%s_disp_%02d" % (identifier, i)
+                dispFn = "%s_%02d" % (dispID, i)
                 dispFn = self.frame.compose_file_name(dispFn, "npy", subFolder=self.testResultSubfolder)
                 np.save(dispFn, outDisp)
 
@@ -615,6 +618,11 @@ class TTPSMNU(TTPSMNet):
             # Calculate sigma.
             sigma = torch.squeeze( torch.sqrt( torch.exp( logSigSqu ) ), 0 ).cpu().numpy()
 
+            if ( flagSaveDisp ):
+                sigFn = "%s_%02d" % (sigID, i)
+                sigFn = self.frame.compose_file_name(sigFn, "npy", subFolder=self.testResultSubfolder)
+                np.save(sigFn, sigma)
+
             sigma = sigma - sigma.min()
             sigma = sigma / sigma.max()
             plt.imshow( sigma )
@@ -638,7 +646,7 @@ class TTPSMNU(TTPSMNet):
             plt.close(fig)
 
     # Overload parent's function.
-    def test(self, imgL, imgR, disp, epochCount, flagSaveDisp=False):
+    def test(self, imgL, imgR, disp, flagSaveDisp=False):
         self.check_frame()
 
         if ( True == self.flagInfer ):
@@ -707,7 +715,7 @@ class TTPSMNU(TTPSMNet):
 
         return loss.item()
 
-    def draw_infer_results(self, identifier, ifNum, predD, imgL, imgR, logSigSqu, Q=None):
+    def draw_infer_results(self, identifier, predD, imgL, imgR, logSigSqu, Q=None, flagSaveDisp=False):
         """
         Draw test results.
 
@@ -716,19 +724,20 @@ class TTPSMNU(TTPSMNet):
         imgR: Dimension (B, C, H, W).
         """
 
-        imgID  = "%s_img_%d" % ( identifier, ifNum )
-        dispID = "%s_disp_%d" % ( identifier, ifNum )
-        sigID  = "%s_sig_%d" % ( identifier, ifNum )
-        plyID  = "%s_ply_%d" % ( identifier, ifNum )
+        imgID  = "%s_img" % ( identifier )
+        dispID = "%s_disp" % ( identifier  )
+        sigID  = "%s_sig" % ( identifier )
+        plyID  = "%s_ply" % ( identifier )
 
         batchSize = predD.size()[0]
         
         for i in range(batchSize):
             outDisp = predD[i, :, :].detach().cpu().numpy()
 
-            dispFn = "%s_%02d" % (dispID, i)
-            dispFn = self.frame.compose_file_name(dispFn, "npy", subFolder=self.testResultSubfolder)
-            np.save(dispFn, outDisp)
+            if ( flagSaveDisp ):
+                dispFn = "%s_%02d" % (dispID, i)
+                dispFn = self.frame.compose_file_name(dispFn, "npy", subFolder=self.testResultSubfolder)
+                np.save(dispFn, outDisp)
 
             dispOri = copy.deepcopy( outDisp )
 
@@ -785,9 +794,10 @@ class TTPSMNU(TTPSMNet):
             # Calculate sigma.
             sigma = torch.sqrt( torch.exp( logSigSqu[i, :, :] ) ).cpu().numpy()
 
-            sigFn = "%s_%02d" % (sigID, i)
-            sigFn = self.frame.compose_file_name(sigFn, "npy", subFolder=self.testResultSubfolder)
-            np.save(sigFn, sigma)
+            if ( flagSaveDisp ):
+                sigFn = "%s_%02d" % (sigID, i)
+                sigFn = self.frame.compose_file_name(sigFn, "npy", subFolder=self.testResultSubfolder)
+                np.save(sigFn, sigma)
             
             sigma = sigma - sigma.min()
             sigma = sigma / sigma.max()
@@ -817,7 +827,7 @@ class TTPSMNU(TTPSMNet):
                 
                 write_PLY( plyFn, dispOri, q, color=img0 * 255)
 
-    def infer(self, imgL, imgR, Q):
+    def infer(self, imgL, imgR, Q, flagSaveDisp=False, falgSaveCloud=False):
         self.check_frame()
 
         # Increase the counter.
@@ -854,13 +864,16 @@ class TTPSMNU(TTPSMNet):
         # output = torch.squeeze( output3.data.cpu(), 1 )
         output = torch.squeeze( output3, 1 )
 
-        # Create helper tensor for flipping Q.
-        QF = torch.from_numpy( Q_FLIP )
+        if ( falgSaveCloud ):
+            # Create helper tensor for flipping Q.
+            QF = torch.from_numpy( Q_FLIP )
 
-        for i in range( Q.shape[0] ):
-            Q[i, :, :] = QF.mm( Q[i, :, :] )
+            for i in range( Q.shape[0] ):
+                Q[i, :, :] = QF.mm( Q[i, :, :] )
+        else:
+            Q = None
 
         # Draw and save results.
-        identifier = "infer" 
-        self.draw_infer_results( identifier, self.countTest - 1, output, imgL, imgR, logSigSqu, Q )
+        identifier = "infer_%d" % (self.countTest - 1)
+        self.draw_infer_results( identifier, output, imgL, imgR, logSigSqu, Q, flagSaveDisp )
         

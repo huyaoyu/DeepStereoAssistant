@@ -57,18 +57,18 @@ class MyWF(TorchFlow.TorchFlow):
         return self.tt.train(imgL, imgR, disp, epochCount)
         
     # Overload the function test().
-    def test(self, imgL, imgR, disp, epochCount, flagSaveDisp):
+    def test(self, imgL, imgR, disp, flagSaveDisp):
         super(MyWF, self).test()
 
         self.check_tt()
 
-        return self.tt.test(imgL, imgR, disp, epochCount, flagSaveDisp)
+        return self.tt.test(imgL, imgR, disp, flagSaveDisp)
 
-    def infer(self, imgL, imgR, Q):
+    def infer(self, imgL, imgR, Q, flagSaveDisp, flagSaveCloud=False):
 
         self.check_tt()
 
-        self.tt.infer( imgL, imgR, Q )
+        self.tt.infer( imgL, imgR, Q, flagSaveDisp, flagSaveCloud )
 
     # Overload the function finalize().
     def finalize(self):
@@ -180,7 +180,7 @@ if __name__ == "__main__":
                                     testImgL, testImgR, testDisp = next( iterTestData )
 
                                 # Perform test.
-                                wf.test( testImgL, testImgR, testDisp, i, args.test_save_disp )
+                                wf.test( testImgL, testImgR, testDisp, args.test_save_disp )
             else:
                 wf.logger.info("Begin testing.")
                 print_delimeter(title="Testing loops.")
@@ -188,7 +188,7 @@ if __name__ == "__main__":
                 totalLoss = 0
 
                 for batchIdx, ( imgL, imgR, disp ) in enumerate( tt.imgTestLoader ):
-                    loss = wf.test( imgL, imgR, disp, batchIdx, args.test_save_disp )
+                    loss = wf.test( imgL, imgR, disp, args.test_save_disp )
 
                     if ( True == tt.flagInspect ):
                         wf.logger.warning("Inspection enabled.")
@@ -207,7 +207,7 @@ if __name__ == "__main__":
 
             for batchIdx, ( imgL, imgR, Q ) in enumerate( tt.imgInferLoader ):
                 startT = time.time()
-                wf.infer( imgL, imgR, Q)
+                wf.infer( imgL, imgR, Q, args.test_save_disp, args.infer_save_cloud)
                 endT = time.time()
                 wf.logger.info("Process time: %fs." % (endT - startT))
 
