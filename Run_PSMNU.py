@@ -204,7 +204,7 @@ if __name__ == "__main__":
                 startT = time.time()
                 wf.infer( imgL, imgR, Q)
                 endT = time.time()
-                wf.logger.info("Infer time: %fs." % (endT - startT))
+                wf.logger.info("Process time: %fs." % (endT - startT))
 
                 if ( True == tt.flagInspect ):
                     wf.logger.warning("Inspection enabled")

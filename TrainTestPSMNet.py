@@ -4,6 +4,7 @@ import copy
 import cv2
 import numpy as np
 import os
+import time
 
 import torch
 from torch.autograd import Variable
@@ -822,12 +823,25 @@ class TTPSMNU(TTPSMNet):
             imgL = imgL.cuda()
             imgR = imgR.cuda()
 
+        startT = time.time()
         with torch.no_grad():
             if ( False == self.flagInspect ):
                 output3, logSigSqu = self.model( imgL, imgR )
             else:
-                prefix = "%s_In%d" % ( self.frame.prefix, self.countTest )
+                prefix = "%s_In%d" % ( self.frame.prefix, self.countTest - 1 )
                 output3, logSigSqu = self.model( imgL, imgR, prefix, self.inspector )
+
+        endT = time.time()
+
+        # Calculate elapsed time.
+        et = endT - startT
+
+        # Save the elapsed time.
+        timeFn = "infer_time_%04d" % (self.countTest - 1)
+        timeFn = self.frame.compose_file_name(timeFn, "txt", subFolder=self.testResultSubfolder)
+        np.savetxt(timeFn, [et], fmt="%f")
+
+        self.frame.logger.info("infer() time %f. " % ( et ))
 
         # output = torch.squeeze( output3.data.cpu(), 1 )
         output = torch.squeeze( output3, 1 )
