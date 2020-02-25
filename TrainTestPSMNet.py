@@ -503,11 +503,11 @@ class TTPSMNU(TTPSMNet):
         out2 = torch.squeeze( out2, 1 )
         out3 = torch.squeeze( out3, 1 )
 
-        dispStartingIndex = disp.shape[1] - out1.shape[1]
+        # dispStartingIndex = disp.shape[1] - out1.shape[1]
 
-        disp = disp[ :, dispStartingIndex:, :]
+        # disp = disp[ :, dispStartingIndex:, :]
 
-        mask = disp < self.maxDisp
+        mask = (disp > 0) & (disp < self.maxDisp)
         mask.detach_()
 
         # =================== New loss function. =============================
@@ -547,7 +547,7 @@ class TTPSMNU(TTPSMNet):
 
         self.frame.logger.info("E%d, L%d: %s" % (epochCount, self.countTrain, self.frame.get_log_str()))
 
-    def draw_test_results(self, identifier, predD, trueD, imgL, imgR, logSigSqu):
+    def draw_test_results(self, identifier, predD, trueD, imgL, imgR, logSigSqu, flagSaveDisp=False):
         """
         Draw test results.
 
@@ -563,6 +563,11 @@ class TTPSMNU(TTPSMNet):
         for i in range(batchSize):
             outDisp = predD[i, :, :].detach().cpu().numpy()
             gdtDisp = trueD[i, :, :].detach().cpu().numpy()
+
+            if ( flagSaveDisp ):
+                dispFn = "%s_disp_%02d" % (identifier, i)
+                dispFn = self.frame.compose_file_name(dispFn, "npy", subFolder=self.testResultSubfolder)
+                np.save(dispFn, outDisp)
 
             gdtMin = gdtDisp.min()
             gdtMax = gdtDisp.max()
@@ -609,7 +614,7 @@ class TTPSMNU(TTPSMNet):
 
             # Calculate sigma.
             sigma = torch.squeeze( torch.sqrt( torch.exp( logSigSqu ) ), 0 ).cpu().numpy()
-            
+
             sigma = sigma - sigma.min()
             sigma = sigma / sigma.max()
             plt.imshow( sigma )
@@ -633,7 +638,7 @@ class TTPSMNU(TTPSMNet):
             plt.close(fig)
 
     # Overload parent's function.
-    def test(self, imgL, imgR, disp, epochCount):
+    def test(self, imgL, imgR, disp, epochCount, flagSaveDisp=False):
         self.check_frame()
 
         if ( True == self.flagInfer ):
@@ -663,11 +668,14 @@ class TTPSMNU(TTPSMNet):
         logSigSqu.clamp_(-10, 10)
         # logSigSqu = logSigSqu.data.cpu()
 
-        dispStartingIndex = disp.shape[1] - output.shape[1]
+        # self.frame.logger.info("disp.shape = \n{}".format(disp.shape))
+        # self.frame.logger.info("output.shape = \n{}".format(output.shape))
 
-        disp = disp[ :, dispStartingIndex:, :]
+        # dispStartingIndex = disp.shape[1] - output.shape[1]
 
-        mask = disp < self.maxDisp
+        # disp = disp[ :, dispStartingIndex:, :]
+
+        mask = ( disp > 0 ) & ( disp < self.maxDisp )
         mask.detach_()
 
         if ( len( disp[mask] ) == 0 ):
@@ -687,7 +695,7 @@ class TTPSMNU(TTPSMNet):
 
         # Draw and save results.
         identifier = "test_%d" % (count - 1)
-        self.draw_test_results( identifier, output, disp, imgL, imgR, logSigSqu )
+        self.draw_test_results( identifier, output, disp, imgL, imgR, logSigSqu, flagSaveDisp )
 
         # Test the existance of an AccumulatedValue object.
         if ( True == self.frame.have_accumulated_value("lossTest") ):
