@@ -65,9 +65,9 @@ def get_commandline_args():
     parser.add_argument("--n-sig", type=float, default=1.0, \
         help="The number of sigmas.")
     parser.add_argument("--height", type=int, \
-        help="The height of the output image.")
+        help="The height of the output image. Set 0 for not resizing.")
     parser.add_argument("--width", type=int, \
-        help="The the width of the output image.")
+        help="The the width of the output image Set 0 for not resizing.")
     parser.add_argument("--out-dir", type=str, default="./", \
         help="The output directory.")
     parser.add_argument("--out-name-lower", type=str, default="LowerBound", \
@@ -119,12 +119,17 @@ def run(args):
     disp = np.load(args.disp).astype(np.float32)
     sig  = np.load(args.sig).astype(np.float32)
 
-    # Resize the files.
-    dispR = cv2.resize( disp, ( args.width, args.height ), interpolation=cv2.INTER_LINEAR )
-    sigR  = cv2.resize( sig,  ( args.width, args.height ), interpolation=cv2.INTER_LINEAR )
+    if ( 0 != args.height and 0 != args.width ):
+        # Resize the files.
+        dispR = cv2.resize( disp, ( args.width, args.height ), interpolation=cv2.INTER_LINEAR )
+        sigR  = cv2.resize( sig,  ( args.width, args.height ), interpolation=cv2.INTER_LINEAR )
+        f     = 1.0 * args.width / disp.shape[1]
+    else:
+        dispR = np.copy( disp )
+        sigR  = np.copy( sig )
+        f     = 1.0
 
     # The width resizing factor.
-    f = args.width / disp.shape[1]
     print("f = %f." % (f))
 
     dispR = dispR * f
@@ -197,6 +202,8 @@ def run(args):
     fig = plt.figure()
     plt.imshow(upperBound)
     fig.savefig(upperBoundFigFn)
+
+    plt.close("all")
 
 if __name__ == "__main__":
     args = get_commandline_args()
