@@ -49,26 +49,26 @@ class MyWF(TorchFlow.TorchFlow):
         self.post_initialize()
 
     # Overload the function train().
-    def train(self, imgL, imgR, disp, epochCount):
+    def train(self, imgL, imgR, disp, dispOri, epochCount):
         super(MyWF, self).train()
 
         self.check_tt()
 
-        return self.tt.train(imgL, imgR, disp, epochCount)
+        return self.tt.train(imgL, imgR, disp, dispOri, epochCount)
         
     # Overload the function test().
-    def test(self, imgL, imgR, disp, flagSaveDisp):
+    def test(self, imgL, imgR, disp, dispOri, flagSaveDisp):
         super(MyWF, self).test()
 
         self.check_tt()
 
-        return self.tt.test(imgL, imgR, disp, flagSaveDisp)
+        return self.tt.test(imgL, imgR, disp, dispOri, flagSaveDisp)
 
-    def infer(self, imgL, imgR, Q, flagSaveDisp, flagSaveCloud=False):
+    def infer(self, imgL, imgR, Q, imgLOri, flagSaveDisp, flagSaveCloud=False):
 
         self.check_tt()
 
-        self.tt.infer( imgL, imgR, Q, flagSaveDisp, flagSaveCloud )
+        self.tt.infer( imgL, imgR, Q, imgLOri, flagSaveDisp, flagSaveCloud )
 
     # Overload the function finalize().
     def finalize(self):
@@ -161,10 +161,10 @@ if __name__ == "__main__":
                 print_delimeter(title = "Training loops.")
 
                 for i in range(args.train_epochs):
-                    for batchIdx, ( imgCropL, imgCropR, dispCrop ) in enumerate( tt.imgTrainLoader ):
+                    for batchIdx, ( imgCropL, imgCropR, dispCrop, dispOri ) in enumerate( tt.imgTrainLoader ):
                         # wf.logger.info( "imgCropL.shape = {}".format( imgCropL.shape ) )
                         # import ipdb; ipdb.set_trace()
-                        wf.train( imgCropL, imgCropR, dispCrop, i )
+                        wf.train( imgCropL, imgCropR, dispCrop, dispOri, i )
 
                         if ( True == tt.flagInspect ):
                             wf.logger.warning("Inspection enabled.")
@@ -174,21 +174,21 @@ if __name__ == "__main__":
                             if ( tt.countTrain % args.test_loops == 0 ):
                                 # Get test data.
                                 try:
-                                    testImgL, testImgR, testDisp = next( iterTestData )
+                                    testImgL, testImgR, testDisp, testDispOri = next( iterTestData )
                                 except StopIteration:
                                     iterTestData = iter(tt.imgTestLoader)
-                                    testImgL, testImgR, testDisp = next( iterTestData )
+                                    testImgL, testImgR, testDisp, testDispOri = next( iterTestData )
 
                                 # Perform test.
-                                wf.test( testImgL, testImgR, testDisp, args.test_save_disp )
+                                wf.test( testImgL, testImgR, testDisp, testDispOri, args.test_save_disp )
             else:
                 wf.logger.info("Begin testing.")
                 print_delimeter(title="Testing loops.")
 
                 totalLoss = 0
 
-                for batchIdx, ( imgL, imgR, disp ) in enumerate( tt.imgTestLoader ):
-                    loss = wf.test( imgL, imgR, disp, args.test_save_disp )
+                for batchIdx, ( imgL, imgR, disp, dispOri ) in enumerate( tt.imgTestLoader ):
+                    loss = wf.test( imgL, imgR, disp, dispOri, args.test_save_disp )
 
                     if ( True == tt.flagInspect ):
                         wf.logger.warning("Inspection enabled.")
@@ -205,9 +205,9 @@ if __name__ == "__main__":
             wf.logger.info("Begin inferring.")
             print_delimeter(title="Inferring loops.")
 
-            for batchIdx, ( imgL, imgR, Q ) in enumerate( tt.imgInferLoader ):
+            for batchIdx, ( imgL, imgR, Q, imgLOri ) in enumerate( tt.imgInferLoader ):
                 startT = time.time()
-                wf.infer( imgL, imgR, Q, args.test_save_disp, args.infer_save_cloud)
+                wf.infer( imgL, imgR, Q, imgLOrki, args.test_save_disp, args.infer_save_cloud)
                 endT = time.time()
                 wf.logger.info("Process time: %fs." % (endT - startT))
 

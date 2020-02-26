@@ -127,6 +127,8 @@ class myImageFolder(data.Dataset):
         dataL, scaleL = self.dploader(disp_L[0], disp_L[1])
         dataL = np.ascontiguousarray(dataL, dtype=np.float32)
 
+        dataLOri = np.copy(dataL)
+
         if ( self.newSize[0] > 0 and self.newSize[1] > 0 ):
             left_img, right_img, dataL = \
                 self.resize_data(left_img, right_img, dataL, self.newSize)
@@ -194,7 +196,7 @@ class myImageFolder(data.Dataset):
 
             dataL = dataL[ h-ch:h, w-cw:w ]
 
-            return left_img, right_img, dataL
+            return left_img, right_img, dataL, dataLOri
 
     def __len__(self):
         return len(self.left)
@@ -233,6 +235,8 @@ class inferImageFolder(data.Dataset):
         left_img = self.loader(left)
         right_img = self.loader(right)
 
+        leftImgOri = np.copy(left_img)
+
         if ( self.newSize[0] > 0 and self.newSize[1] > 0 ):
             left_img, right_img = self.resize_data(left_img, right_img, self.newSize)
 
@@ -260,7 +264,7 @@ class inferImageFolder(data.Dataset):
         # Load the Q matrix.
         Q = self.Q[index]
 
-        return left_img, right_img, torch.from_numpy( np.loadtxt( Q, dtype=np.float32 ) )
+        return left_img, right_img, torch.from_numpy( np.loadtxt( Q, dtype=np.float32 ) ), leftImgOri
 
     def __len__(self):
         return len(self.left)

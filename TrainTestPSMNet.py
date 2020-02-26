@@ -472,7 +472,7 @@ class TTPSMNU(TTPSMNet):
             ( sum( [ p.data.nelement() for p in self.model.parameters() ] ) ) )
 
     # Overload parent's function.
-    def train(self, imgL, imgR, disp, epochCount):
+    def train(self, imgL, imgR, disp, dispOri, epochCount):
         self.check_frame()
 
         if ( True == self.flagInfer ):
@@ -646,7 +646,7 @@ class TTPSMNU(TTPSMNet):
             plt.close(fig)
 
     # Overload parent's function.
-    def test(self, imgL, imgR, disp, flagSaveDisp=False):
+    def test(self, imgL, imgR, disp, dispOri, flagSaveDisp=False):
         self.check_frame()
 
         if ( True == self.flagInfer ):
@@ -663,6 +663,7 @@ class TTPSMNU(TTPSMNet):
             imgL = imgL.cuda()
             imgR = imgR.cuda()
             disp = disp.cuda()
+            dispOri = dispOri.cuda()
 
         with torch.no_grad():
             if ( False == self.flagInspect ):
@@ -671,8 +672,27 @@ class TTPSMNU(TTPSMNet):
                 prefix = "%s_Te%d" % ( self.frame.prefix, self.countTest )
                 output3, logSigSqu = self.model( imgL, imgR, prefix, self.inspector )
 
-        # output = torch.squeeze( output3.data.cpu(), 1 )
-        output = torch.squeeze( output3, 1 )
+        output = torch.unsqueeze(output3, 1)
+        logSigSqu = torch.unsqueeze(logSigSqu, 1)
+
+        # print("disp.size() = \n{}".format(disp.size()))
+        # print("dispOri.size() = \n{}".format(dispOri.size()))
+        # print("output.size() = \n{}".format(output.size()))
+        # print("logSigSqu.size() = \n{}".format(logSigSqu.size()))
+        # raise Exception("Test.")
+
+        # Resize to the original size.
+        hOri = dispOri.size()[1]
+        wOri = dispOri.size()[2]
+
+        wTest = output.size()[3]
+
+        output = F.interpolate(output, (hOri, wOri), mode="bilinear", align_corners=False ) * (1.0*wOri/wTest)
+        logSigSqu = F.interpolate(logSigSqu, (hOri, wOri), mode="bilinear", align_corners=False ) * (1.0*wOri/wTest)**2
+
+        output = torch.squeeze( output, 1 )
+        logSigSqu = torch.squeeze( logSigSqu, 1)
+
         logSigSqu.clamp_(-10, 10)
         # logSigSqu = logSigSqu.data.cpu()
 
@@ -683,17 +703,17 @@ class TTPSMNU(TTPSMNet):
 
         # disp = disp[ :, dispStartingIndex:, :]
 
-        mask = ( disp > 0 ) & ( disp < self.maxDisp )
+        mask = ( dispOri > 0 ) & ( dispOri < self.maxDisp )
         mask.detach_()
 
-        if ( len( disp[mask] ) == 0 ):
+        if ( len( dispOri[mask] ) == 0 ):
             loss = 0
         else:
             # import ipdb; ipdb.set_trace()
             expLogSigSqu = torch.exp(-logSigSqu)
             mExpLogSigSqu = expLogSigSqu[mask]
 
-            loss = torch.mean( torch.abs( mExpLogSigSqu * output[mask] - mExpLogSigSqu * disp[mask] ) )
+            loss = torch.mean( torch.abs( mExpLogSigSqu * output[mask] - mExpLogSigSqu * dispOri[mask] ) )
             loss = ( loss + torch.mean( logSigSqu ) ) / 2.0
 
         if ( True == self.flagTest ):
@@ -703,7 +723,7 @@ class TTPSMNU(TTPSMNet):
 
         # Draw and save results.
         identifier = "test_%04d" % (count - 1)
-        self.draw_test_results( identifier, output, disp, imgL, imgR, logSigSqu, flagSaveDisp )
+        self.draw_test_results( identifier, output, dispOri, imgL, imgR, logSigSqu, flagSaveDisp )
 
         # Test the existance of an AccumulatedValue object.
         if ( True == self.frame.have_accumulated_value("lossTest") ):
@@ -827,7 +847,7 @@ class TTPSMNU(TTPSMNet):
                 
                 write_PLY( plyFn, dispOri, q, color=img0 * 255)
 
-    def infer(self, imgL, imgR, Q, flagSaveDisp=False, falgSaveCloud=False):
+    def infer(self, imgL, imgR, Q, imgLOri, flagSaveDisp=False, falgSaveCloud=False):
         self.check_frame()
 
         # Increase the counter.
@@ -840,6 +860,7 @@ class TTPSMNU(TTPSMNet):
         if ( not self.flagCPU ):
             imgL = imgL.cuda()
             imgR = imgR.cuda()
+            imgLOri = imgLOri.cuda()
 
         startT = time.time()
         with torch.no_grad():
@@ -861,8 +882,20 @@ class TTPSMNU(TTPSMNet):
 
         self.frame.logger.info("infer() time %f. " % ( et ))
 
-        # output = torch.squeeze( output3.data.cpu(), 1 )
-        output = torch.squeeze( output3, 1 )
+        output = torch.unsqueeze(output3, 1)
+        logSigSqu = torch.unsqueeze(logSigSqu, 1)
+
+        # Resize to the original size.
+        hOri = imgLOri.size()[2]
+        wOri = imgLOri.size()[3]
+
+        wTest = output.size()[3]
+
+        output = F.interpolate(output, (hOri, wOri), mode="bilinear", align_corners=False ) * (1.0*wOri/wTest)
+        logSigSqu = F.interpolate(logSigSqu, (hOri, wOri), mode="bilinear", align_corners=False ) * (1.0*wOri/wTest)**2
+
+        output = torch.squeeze( output, 1 )
+        logSigSqu = torch.squeeze(logSigSqu, 1)
 
         if ( falgSaveCloud ):
             # Create helper tensor for flipping Q.
