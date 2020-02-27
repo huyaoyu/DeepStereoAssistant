@@ -82,6 +82,9 @@ parser.add_argument("--test-loops", type=int, default=0, \
 parser.add_argument("--test-save-disp", action="store_true", default=False, \
     help="Set this flag to save the disparity when doing a test.")
 
+parser.add_argument("--test-start-index", type=int, default=0, \
+    help="The starting index of the test. Only valid under test mode.")
+
 parser.add_argument("--infer", action="store_true", default=False, \
     help="Enable the infer mode.")
 

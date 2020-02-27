@@ -129,6 +129,7 @@ if __name__ == "__main__":
 
         if ( True == args.test ):
             tt.switch_on_test()
+            tt.set_count_test(args.test_start_index)
         else:
             tt.switch_off_test()
 
@@ -186,21 +187,31 @@ if __name__ == "__main__":
                 print_delimeter(title="Testing loops.")
 
                 totalLoss = 0
+                validTestCount = 0
 
                 for batchIdx, ( imgL, imgR, disp, dispOri ) in enumerate( tt.imgTestLoader ):
-                    loss = wf.test( imgL, imgR, disp, dispOri, args.test_save_disp )
+                    if ( batchIdx < args.test_start_index ):
+                        wf.logger.info("Test %d, ignored. " % (batchIdx))
+                        continue
+
+                    loss, flagGoodLoss = \
+                        wf.test( imgL, imgR, disp, dispOri, args.test_save_disp )
+
+                    if ( flagGoodLoss == 1 ):
+                        validTestCount += 1
+                        wf.logger.info("Test %d, loss = %f." % ( batchIdx, loss ))
+                        totalLoss += loss
+                    else:
+                        wf.logger.info("Test %d failed." % ( batchIdx ))
 
                     if ( True == tt.flagInspect ):
                         wf.logger.warning("Inspection enabled.")
-
-                    wf.logger.info("Test %d, loss = %f." % ( batchIdx, loss ))
-                    totalLoss += loss
 
                     if ( args.test ):
                         if ( args.test_loops != 0 and batchIdx == args.test_loops - 1 ):
                             break
 
-                wf.logger.info("Average loss = %f." % ( totalLoss / (batchIdx+1) ))
+                wf.logger.info("Average loss = %f." % ( totalLoss / max(validTestCount, 1) ))
         else:
             wf.logger.info("Begin inferring.")
             print_delimeter(title="Inferring loops.")

@@ -234,6 +234,9 @@ class TrainTestBase(object):
     def switch_on_test(self):
         self.flagTest = True
 
+    def set_count_test(self, c):
+        self.countTest = int(c)
+
     def switch_off_test(self):
         self.flagTest = False
 

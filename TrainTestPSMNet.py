@@ -652,9 +652,6 @@ class TTPSMNU(TTPSMNet):
         if ( True == self.flagInfer ):
             raise Exception("Could not test in the infer mode.")
 
-        # Increase the counter.
-        self.countTest += 1
-
         self.model.eval()
         imgL = Variable( torch.FloatTensor( imgL ) )
         imgR = Variable( torch.FloatTensor( imgR ) )
@@ -703,11 +700,20 @@ class TTPSMNU(TTPSMNet):
 
         # disp = disp[ :, dispStartingIndex:, :]
 
+        if ( True == self.flagTest ):
+            count = self.countTest
+        else:
+            count = self.countTrain
+
         mask = ( dispOri > 0 ) & ( dispOri < self.maxDisp )
         mask.detach_()
 
+        flagGoodLoss = 1
+
         if ( len( dispOri[mask] ) == 0 ):
-            loss = 0
+            loss = torch.zeros((1)) # Dummy value.
+            self.frame.logger.info("Test index %d. mask length = 0. " % (count))
+            flagGoodLoss = 0
         else:
             # import ipdb; ipdb.set_trace()
             expLogSigSqu = torch.exp(-logSigSqu)
@@ -716,13 +722,8 @@ class TTPSMNU(TTPSMNet):
             loss = torch.mean( torch.abs( mExpLogSigSqu * output[mask] - mExpLogSigSqu * dispOri[mask] ) )
             loss = ( loss + torch.mean( logSigSqu ) ) / 2.0
 
-        if ( True == self.flagTest ):
-            count = self.countTest
-        else:
-            count = self.countTrain
-
         # Draw and save results.
-        identifier = "test_%04d" % (count - 1)
+        identifier = "test_%04d" % (count)
         self.draw_test_results( identifier, output, dispOri, imgL, imgR, logSigSqu, flagSaveDisp )
 
         # Test the existance of an AccumulatedValue object.
@@ -733,7 +734,10 @@ class TTPSMNU(TTPSMNet):
 
         self.frame.plot_accumulated_values()
 
-        return loss.item()
+        # Increase the counter.
+        self.countTest += 1
+
+        return loss.item(), flagGoodLoss
 
     def draw_infer_results(self, identifier, predD, imgL, imgR, logSigSqu, Q=None, flagSaveDisp=False):
         """
