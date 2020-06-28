@@ -167,7 +167,7 @@ class myImageFolder(data.Dataset):
                 left_img  = self.preprocessor(left_img)
                 right_img = self.preprocessor(right_img)
 
-            return left_img, right_img, dataL
+            return left_img, right_img, dataL, dataLOri
         else:
             # w, h = left_img.size
 
