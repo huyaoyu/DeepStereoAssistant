@@ -31,8 +31,8 @@ Q_FLIP = np.array( [ \
     [ 0.0,  0.0,  0.0, 1.0 ] ], dtype=np.float32 )
 
 class TTPSMNet(TrainTestBase):
-    def __init__(self, workingDir, frame=None):
-        super(TTPSMNet, self).__init__( workingDir, frame )
+    def __init__(self, workingDir, frame=None, modelName='PSMNet'):
+        super(TTPSMNet, self).__init__( workingDir, frame, modelName )
 
     # def initialize(self):
     #     self.check_frame()
@@ -399,11 +399,12 @@ class TTPSMNet(TrainTestBase):
 
         # Save the model.
         if ( False == self.flagTest and False == self.flagInfer ):
-            self.frame.save_model( self.model, "PSMNet" )
+            self.frame.save_model( self.model, self.modelName )
+            self.frame.save_optimizer( self.optimizer, "%s_Opt" % (self.modelName) )
 
 class TTPSMNU(TTPSMNet):
-    def __init__(self, workingDir, frame=None):
-        super(TTPSMNU, self).__init__( workingDir, frame )
+    def __init__(self, workingDir, frame=None, modelName='PSMNU'):
+        super(TTPSMNU, self).__init__( workingDir, frame, modelName )
 
         self.flagInspect = False # Set True to perform inspection. NOTE: High filesystem memory consumption.
         self.inspector   = None

@@ -32,9 +32,10 @@ DATASET_LIST_INFERRING_IMG_R = "InputImageInferR.txt"
 DATASET_LIST_INFERRING_Q     = "InputQ.txt"
 
 class TrainTestBase(object):
-    def __init__(self, workingDir, frame=None):
-        self.wd = workingDir
-        self.frame = frame
+    def __init__(self, workingDir, frame=None, modelName='Stereo'):
+        self.wd        = workingDir
+        self.frame     = frame
+        self.modelName = modelName
 
         # NN.
         self.countTrain = 0
