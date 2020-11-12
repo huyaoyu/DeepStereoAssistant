@@ -886,12 +886,14 @@ class TTPSMNU(TTPSMNet):
 
         self.frame.logger.info("infer() time %f. " % ( et ))
 
+        # import ipdb; ipdb.set_trace()
         output = torch.unsqueeze(output3, 1)
         logSigSqu = torch.unsqueeze(logSigSqu, 1)
 
         # Resize to the original size.
-        hOri = imgLOri.size()[2]
-        wOri = imgLOri.size()[3]
+        # imgLOri is in B, H, W, C order. 20201112.
+        hOri = imgLOri.size()[1]
+        wOri = imgLOri.size()[2]
 
         wTest = output.size()[3]
 
