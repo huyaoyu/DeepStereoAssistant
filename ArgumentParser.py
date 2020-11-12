@@ -13,6 +13,9 @@ parser.add_argument("--input", type=str, default="", \
 parser.add_argument("--read-model", type=str, default="", \
     help="Real model from working directory. Supply empty string for not reading model.")
 
+parser.add_argument("--read-optimizer", type=str, default="", \
+    help="Read the optimizer state from the working directory. Leave blank for not reading the optimizer.")
+
 parser.add_argument("--prefix", type=str, default="", \
     help="The prefix of the work flow. The user should supply delimiters such as _ .")
 

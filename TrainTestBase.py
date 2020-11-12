@@ -71,7 +71,8 @@ class TrainTestBase(object):
         self.flagCPU   = False
         self.multiGPUs = False
 
-        self.readModelString    = ""
+        self.readModelString     = ""
+        self.readOptimizerString = ""
         self.autoSaveModelLoops = 0 # The number of loops to perform an auto-saving of the model. 0 for disable.
 
         self.optimizer = None
@@ -210,6 +211,14 @@ class TrainTestBase(object):
 
         if ( "" != self.readModelString ):
             self.frame.logger.info("Read model from %s." % ( self.readModelString ))
+
+    def set_read_optimizer(self, readOptimizerString):
+        self.check_frame()
+
+        self.readOptimizerString = readOptimizerString
+
+        if ( "" != self.readOptimizerString ):
+            self.frame.logger.info("Read optimizer from %s. " % ( self.readOptimizerString ))
 
     def enable_auto_save(self, loops):
         self.check_frame()

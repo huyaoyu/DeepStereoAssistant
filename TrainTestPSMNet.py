@@ -94,7 +94,7 @@ class TTPSMNet(TrainTestBase):
             if ( False == os.path.isfile( modelFn ) ):
                 raise Exception("Model file (%s) does not exist." % ( modelFn ))
 
-            self.model = self.frame.load_model( self.model, modelFn )
+            self.frame.load_model( self.model, modelFn )
 
         if ( self.flagCPU ):
             self.model.set_cpu_mode()
@@ -105,10 +105,26 @@ class TTPSMNet(TrainTestBase):
     # def post_init_model(self):
     #     raise Exception("Not implemented.")
 
+    def update_learning_rate(self):
+        for pg in self.optimizer.param_groups:
+            pg['lr'] = self.learningRate
+
     # Overload parent's function.
     def init_optimizer(self):
         # self.optimizer = optim.Adam( self.model.parameters(), lr=0.001, betas=(0.9, 0.999) )
         self.optimizer = optim.Adam( self.model.parameters(), lr=self.learningRate )
+
+        # Check if we have to read the optimizer state from the filesystem.
+        if ( "" != self.readOptimizerString ):
+            optFn = "%s/models/%s" % ( self.frame.workingDir, self.readOptimizerString )
+
+            if ( not os.path.isfile( optFn ) ):
+                raise Exception("Optimizer file (%s) does not exist. " % ( optFn ))
+
+            self.frame.load_optimizer(self.optimizer, optFn)
+            # Update the learning rate.
+            self.update_learning_rate()
+            self.frame.logger.info("Optimizer state loaded for file %s. " % (optFn))
 
     # Overload parent's function.
     def train(self, imgL, imgR, disp, epochCount):
@@ -459,7 +475,7 @@ class TTPSMNU(TTPSMNet):
             if ( False == os.path.isfile( modelFn ) ):
                 raise Exception("Model file (%s) does not exist." % ( modelFn ))
 
-            self.model = self.frame.load_model( self.model, modelFn )
+            self.frame.load_model( self.model, modelFn )
 
         if ( self.flagCPU ):
             self.model.set_cpu_mode()

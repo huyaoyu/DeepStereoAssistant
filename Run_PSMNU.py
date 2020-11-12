@@ -124,6 +124,7 @@ if __name__ == "__main__":
             newSize=newSize, cropTrain=cropTrain, cropTest=cropTest )
         tt.set_dataset_root_dir( args.data_root_dir, args.data_entries, args.data_file_list, args.data_file_list_dir )
         tt.set_read_model( args.read_model )
+        tt.set_read_optimizer( args.read_optimizer )
         tt.enable_auto_save( args.auto_save_model )
         tt.set_training_acc_params( args.train_interval_acc_write, args.train_interval_acc_plot, args.use_intermittent_plotter )
 
