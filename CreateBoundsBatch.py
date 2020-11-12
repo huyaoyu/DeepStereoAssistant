@@ -70,6 +70,8 @@ if __name__ == "__main__":
         help="The search pattern of the sigma file.")
     parser.add_argument("--sub", action="store_true", default=False, \
         help="Set this flag to let the script search sub-folders recursively. The result files will also be stored in sub-folders.")
+    parser.add_argument("--use-filename-as-outdir", action="store_ture", default=False, \
+        help="Use the filename as the output directory. ")
     parser.add_argument("--occ", action="store_true", default=False, \
         help="Create occlusion proposal at the same time.")
     # parser.add_argument("--occ-disable-cuda", action="store_true", default=False, \
@@ -125,7 +127,13 @@ if __name__ == "__main__":
         partsSig  = get_parts(sigFn)
 
         # The output directory.
-        outDir = partsDisp[0]
+        if ( args.use_filename_as_outdir ):
+            outDir = os.path.join( partsDisp[0], partsDisp[1] )
+        else:
+            outDir = partsDis[0]
+
+        if ( not os.path.isdir(outDir) ):
+            os.makedirs(outDir)
 
         print(dispFn)
 
