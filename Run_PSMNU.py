@@ -218,7 +218,7 @@ if __name__ == "__main__":
 
             for batchIdx, ( imgL, imgR, Q, imgLOri ) in enumerate( tt.imgInferLoader ):
                 startT = time.time()
-                wf.infer( imgL, imgR, Q, imgLOrki, args.test_save_disp, args.infer_save_cloud)
+                wf.infer( imgL, imgR, Q, imgLOri, args.test_save_disp, args.infer_save_cloud)
                 endT = time.time()
                 wf.logger.info("Process time: %fs." % (endT - startT))
 
