@@ -17,6 +17,7 @@ from TrainTestBase import TrainTestBase
 
 from model import PyramidNet
 from PointCloud.PLYHelper import write_PLY
+from TorchCUDAMem import TorchTraceMalloc
 
 import matplotlib.pyplot as plt
 if ( not ( "DISPLAY" in os.environ ) ):
@@ -883,15 +884,17 @@ class TTPSMNU(TTPSMNet):
             imgR = imgR.cuda()
             imgLOri = imgLOri.cuda()
 
-        startT = time.time()
-        with torch.no_grad():
-            if ( False == self.flagInspect ):
-                output3, logSigSqu = self.model( imgL, imgR )
-            else:
-                prefix = "%s_In%d" % ( self.frame.prefix, self.countTest - 1 )
-                output3, logSigSqu = self.model( imgL, imgR, prefix, self.inspector )
+        with TorchTraceMalloc() as ttm:
+            startT = time.time()
+            with torch.no_grad():
+                if ( False == self.flagInspect ):
+                    output3, logSigSqu = self.model( imgL, imgR )
+                else:
+                    prefix = "%s_In%d" % ( self.frame.prefix, self.countTest - 1 )
+                    output3, logSigSqu = self.model( imgL, imgR, prefix, self.inspector )
 
-        endT = time.time()
+            endT = time.time()
+            memSnap = np.array(ttm.snap_shot(), dtype=np.int)
 
         # Calculate elapsed time.
         et = endT - startT
@@ -902,6 +905,11 @@ class TTPSMNU(TTPSMNet):
         np.savetxt(timeFn, [et], fmt="%f")
 
         self.frame.logger.info("infer() time %f. " % ( et ))
+
+        # Save the memory usage.
+        memFn = "infer_mem_%04d" % (self.countTest - 1)
+        memFn = self.frame.compose_file_name(memFn, 'txt', subFolder=self.testResultSubfolder)
+        np.savetxt(memFn, memSnap)
 
         # import ipdb; ipdb.set_trace()
         output = torch.unsqueeze(output3, 1)
